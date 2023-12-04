@@ -14,7 +14,7 @@ services:
     volumes:
       - /internal/eth/goerli:/root/.local/share/reth/goerli/db
       - /internal/eth/rethlogs:/root/rethlogs
-      - ./jwttoken:/root/jwt:ro
+      - ./reth/etc/jwttoken:/root/jwt:ro
     # For Sepolia, replace `--chain mainnet` with `--chain sepolia`
     command: >
       node
@@ -40,7 +40,7 @@ services:
     ports:
       - 9090:9090
     volumes:
-      - ./prometheus/:/etc/prometheus/
+      - ./reth/etc/prometheus/:/etc/prometheus/
       - /internal/eth/prometheusdata:/prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -58,8 +58,8 @@ services:
       PROMETHEUS_URL: http://prometheus:9090
     volumes:
       - /internal/eth/grafanadata:/var/lib/grafana
-      - ./grafana/datasources:/etc/grafana/provisioning/datasources
-      - ./grafana/dashboards:/etc/grafana/provisioning_temp/dashboards
+      - ./reth/etc/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./reth/etc/grafana/dashboards:/etc/grafana/provisioning_temp/dashboards
     # 1. Copy dashboards from temp directory to prevent modifying original host files
     # 2. Replace Prometheus datasource placeholder with the actual name
     # 3. Run Grafana
