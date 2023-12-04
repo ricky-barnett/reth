@@ -40,7 +40,7 @@ services:
     ports:
       - 9090:9090
     volumes:
-      - ./reth/etc/prometheus/:/etc/prometheus/
+      - ./reth/etc/prometheus:/etc/prometheus/
       - /internal/eth/prometheusdata:/prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
