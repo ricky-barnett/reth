@@ -69,11 +69,11 @@ services:
              /run.sh"
     
 volumes:
-  /internal/eth/goerli:
+  goerli:
     driver: local
-  /internal/eth/rethlogs:
+  rethlogs:
     driver: local
-  /internal/eth/prometheusdata:
+  prometheusdata:
     driver: local
-  /internal/eth/grafanadata:
+  grafanadata:
     driver: local
