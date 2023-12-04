@@ -14,6 +14,7 @@ services:
     volumes:
       - rethdata_mainnet:/root/.local/share/reth/mainnet/db
       - rethdata_sepolia:/root/.local/share/reth/sepolia/db
+      - rethdata_goerli:/root/.local/share/reth/goerli/db
       - rethlogs:/root/rethlogs
       - ./jwttoken:/root/jwt:ro
     # For Sepolia, replace `--chain mainnet` with `--chain sepolia`
@@ -71,6 +72,8 @@ volumes:
   rethdata_mainnet:
     driver: local
   rethdata_sepolia:
+    driver: local
+  rethdata_goerli:
     driver: local
   rethlogs:
     driver: local
