@@ -14,7 +14,7 @@ services:
       - '9000:9000/tcp' # p2p
       - '9000:9000/udp' # p2p
     volumes:
-      - lighthousedata:/root/.lighthouse
+      - ~/lighthousedata:/root/.lighthouse
       - ./jwttoken:/root/jwt:ro
     # For Sepolia:
     # - Replace `--network mainnet` with `--network sepolia`
