@@ -13,8 +13,6 @@ services:
       - '8551:8551' # engine
     volumes:
       - /internal/eth/mainnet:/root/.local/share/reth/mainnet/db
-      - /internal/eth/sepolia:/root/.local/share/reth/sepolia/db
-      - /internal/eth/goerli:/root/.local/share/reth/goerli/db
       - /internal/eth/rethlogs:/root/rethlogs
       - ./jwttoken:/root/jwt:ro
     # For Sepolia, replace `--chain mainnet` with `--chain sepolia`
@@ -43,7 +41,7 @@ services:
       - 9090:9090
     volumes:
       - ./prometheus/:/etc/prometheus/
-      - prometheusdata:/prometheus
+      - /internal/eth/prometheusdata:/prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -59,7 +57,7 @@ services:
     environment:
       PROMETHEUS_URL: http://prometheus:9090
     volumes:
-      - grafanadata:/var/lib/grafana
+      - /internal/eth/grafanadata:/var/lib/grafana
       - ./grafana/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/dashboards:/etc/grafana/provisioning_temp/dashboards
     # 1. Copy dashboards from temp directory to prevent modifying original host files
@@ -71,13 +69,9 @@ services:
              /run.sh"
     
 volumes:
-  /internal/eth/mainnet:
+  goerli:
     driver: local
-  /internal/eth/sepolia:
-    driver: local
-  /internal/eth/goerli:
-    driver: local
-  /internal/eth/rethlogs:
+  rethlogs:
     driver: local
   prometheusdata:
     driver: local
