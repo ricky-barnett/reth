@@ -12,10 +12,10 @@ services:
       - '8546:8546' # ws
       - '8551:8551' # engine
     volumes:
-      - rethdata_mainnet:/root/.local/share/reth/mainnet/db
-      - rethdata_sepolia:/root/.local/share/reth/sepolia/db
-      - rethdata_goerli:/root/.local/share/reth/goerli/db
-      - rethlogs:/root/rethlogs
+      - /internal/eth/mainnet:/root/.local/share/reth/mainnet/db
+      - /internal/eth/sepolia:/root/.local/share/reth/sepolia/db
+      - /internal/eth/goerli:/root/.local/share/reth/goerli/db
+      - /internal/eth/rethlogs:/root/rethlogs
       - ./jwttoken:/root/jwt:ro
     # For Sepolia, replace `--chain mainnet` with `--chain sepolia`
     command: >
@@ -71,13 +71,13 @@ services:
              /run.sh"
     
 volumes:
-  rethdata_mainnet:
+  /internal/eth/mainnet:
     driver: local
-  rethdata_sepolia:
+  /internal/eth/sepolia:
     driver: local
-  rethdata_goerli:
+  /internal/eth/goerli:
     driver: local
-  rethlogs:
+  /internal/eth/rethlogs:
     driver: local
   prometheusdata:
     driver: local
