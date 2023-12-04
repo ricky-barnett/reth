@@ -69,7 +69,6 @@ services:
              /run.sh"
     
 volumes:
-    driver: local
   /internal/eth/goerli:
     driver: local
   /internal/eth/rethlogs:
