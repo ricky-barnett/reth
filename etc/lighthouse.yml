@@ -14,7 +14,7 @@ services:
       - '9000:9000/tcp' # p2p
       - '9000:9000/udp' # p2p
     volumes:
-      - lighthousedata:/root/.lighthouse
+      - /internal/eth/lighthousedata:/root/.lighthouse
       - ./jwttoken:/root/jwt:ro
     # For Sepolia:
     # - Replace `--network mainnet` with `--network sepolia`
@@ -26,7 +26,7 @@ services:
       --execution-endpoint http://reth:8551
       --metrics --metrics-address 0.0.0.0
       --execution-jwt /root/jwt/jwt.hex
-      --checkpoint-sync-url https://mainnet.checkpoint.sigp.io
+      --checkpoint-sync-url https://prater-checkpoint-sync.stakely.io
 
   metrics-exporter:
     restart: unless-stopped
@@ -43,5 +43,5 @@ services:
       - --metrics-port=9091
 
 volumes:
-  lighthousedata:
+  /internal/eth/lighthousedata:
     driver: local
