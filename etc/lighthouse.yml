@@ -15,7 +15,7 @@ services:
       - '9000:9000/udp' # p2p
     volumes:
       - ~/lighthousedata:/root/.lighthouse
-      - ./jwttoken:/root/jwt:ro
+      - ~/reth/etc/jwttoken:/root/jwt:ro
     # For Sepolia:
     # - Replace `--network mainnet` with `--network sepolia`
     # - Use different checkpoint sync URL: `--checkpoint-sync-url https://sepolia.checkpoint-sync.ethpandaops.io`
@@ -37,7 +37,7 @@ services:
     ports:
       - 9091:9091 # metrics
     volumes:
-      - ./ethereum-metrics-exporter/config.yaml:/root/config.yaml
+      - ~/reth/etc/ethereum-metrics-exporter/config.yaml:/root/config.yaml
     command:
       - --config=/root/config.yaml
       - --metrics-port=9091
