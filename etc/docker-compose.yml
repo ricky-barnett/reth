@@ -12,8 +12,6 @@ services:
       - '8546:8546' # ws
       - '8551:8551' # engine
     volumes:
-      - /internal/eth/mainnet:/root/.local/share/reth/mainnet/db
-      - /internal/eth/sepolia:/root/.local/share/reth/sepolia/db
       - /internal/eth/goerli:/root/.local/share/reth/goerli/db
       - /internal/eth/rethlogs:/root/rethlogs
       - ./jwttoken:/root/jwt:ro
@@ -71,9 +69,6 @@ services:
              /run.sh"
     
 volumes:
-  /internal/eth/mainnet:
-    driver: local
-  /internal/eth/sepolia:
     driver: local
   /internal/eth/goerli:
     driver: local
