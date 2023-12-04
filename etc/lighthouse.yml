@@ -43,5 +43,5 @@ services:
       - --metrics-port=9091
 
 volumes:
-  /internal/eth/lighthousedata:
+  lighthousedata:
     driver: local
