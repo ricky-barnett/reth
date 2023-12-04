@@ -43,7 +43,7 @@ services:
       - 9090:9090
     volumes:
       - ./prometheus/:/etc/prometheus/
-      - prometheusdata:/prometheus
+      - /internal/eth/prometheusdata:/prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -59,7 +59,7 @@ services:
     environment:
       PROMETHEUS_URL: http://prometheus:9090
     volumes:
-      - grafanadata:/var/lib/grafana
+      - /internal/eth/grafanadata:/var/lib/grafana
       - ./grafana/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/dashboards:/etc/grafana/provisioning_temp/dashboards
     # 1. Copy dashboards from temp directory to prevent modifying original host files
@@ -79,7 +79,7 @@ volumes:
     driver: local
   /internal/eth/rethlogs:
     driver: local
-  prometheusdata:
+  /internal/eth/prometheusdata:
     driver: local
-  grafanadata:
+  /internal/eth/grafanadata:
     driver: local
