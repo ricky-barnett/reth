@@ -71,15 +71,15 @@ services:
              /run.sh"
     
 volumes:
-  ~/rethdata_mainnet:
+  rethdata_mainnet:
     driver: local
-  ~/rethdata_sepolia:
+  rethdata_sepolia:
     driver: local
-  ~/rethdata_goerli:
+  rethdata_goerli:
     driver: local
-  ~/rethlogs:
+  rethlogs:
     driver: local
-  ~/prometheusdata:
+  prometheusdata:
     driver: local
-  ~/grafanadata:
+  grafanadata:
     driver: local
