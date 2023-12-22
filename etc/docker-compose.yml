@@ -34,6 +34,14 @@ services:
       --ws.origins "*"
       --ws.api "eth,net,web3,txpool,admin,eth-call-bundle"
 
+  simulator:
+    restart: unless-stopped
+    image: rickybarnett/simulator
+    depends_on:
+      - reth
+    ports:
+      - 8001:8080
+
   prometheus:
     restart: unless-stopped
     image: prom/prometheus
