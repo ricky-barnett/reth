@@ -29,10 +29,10 @@ services:
       --authrpc.jwtsecret /root/jwt/jwt.hex
       --http --http.addr 0.0.0.0 --http.port 8545
       --http.corsdomain "*"
-      --http.api "eth,net,web3,txpool,admin,eth-call-bundle,debug"
+      --http.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
       --ws --ws.addr 0.0.0.0 --ws.port 8546
       --ws.origins "*"
-      --ws.api "eth,net,web3,txpool,admin,eth-call-bundle,debug"
+      --ws.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
 
   simulator:
     restart: unless-stopped
