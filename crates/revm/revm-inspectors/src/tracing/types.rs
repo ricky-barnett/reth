@@ -1,9 +1,9 @@
 //! Types for representing call trace items.
 
-use crate::tracing::{config::TraceStyle, utils::convert_memory};
+use crate::tracing::{config::TraceStyle, utils, utils::convert_memory};
 pub use alloy_primitives::Log;
 use alloy_primitives::{Address, Bytes, U256, U64};
-use alloy_sol_types::decode_revert_reason;
+
 use reth_rpc_types::trace::{
     geth::{CallFrame, CallLogFrame, GethDefaultTracingOptions, StructLog},
     parity::{
@@ -347,7 +347,8 @@ impl CallTraceNode {
 
         // we need to populate error and revert reason
         if !self.trace.success {
-            call_frame.revert_reason = decode_revert_reason(self.trace.output.as_ref());
+            call_frame.revert_reason = utils::maybe_revert_reason(self.trace.output.as_ref());
+
             // Note: the call tracer mimics parity's trace transaction and geth maps errors to parity style error messages, <https://github.com/ethereum/go-ethereum/blob/34d507215951fb3f4a5983b65e127577989a6db8/eth/tracers/native/call_flat.go#L39-L55>
             call_frame.error = self.trace.as_error_msg(TraceStyle::Parity);
         }

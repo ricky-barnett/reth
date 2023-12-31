@@ -1,4 +1,5 @@
 #![allow(missing_docs)]
+
 use super::{
     broadcast::NewBlockHashes, BlockBodies, BlockHeaders, GetBlockBodies, GetBlockHeaders,
     GetNodeData, GetPooledTransactions, GetReceipts, NewBlock, NewPooledTransactionHashes66,
@@ -317,6 +318,13 @@ pub enum EthMessageID {
     NodeData = 0x0e,
     GetReceipts = 0x0f,
     Receipts = 0x10,
+}
+
+impl EthMessageID {
+    /// Returns the max value.
+    pub const fn max() -> u8 {
+        Self::Receipts as u8
+    }
 }
 
 impl Encodable for EthMessageID {

@@ -21,6 +21,9 @@ members = [
     "crates/net/network-api/",
     "crates/payload/basic/",
     "crates/payload/builder/",
+    "crates/payload/ethereum/",
+    "crates/payload/optimism/",
+    "crates/payload/validator/",
     "crates/primitives/",
     "crates/prune/",
     "crates/revm/",
@@ -63,7 +66,7 @@ default-members = ["bin/reth"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0-alpha.12"
+version = "0.1.0-alpha.13"
 edition = "2021"
 rust-version = "1.70"
 license = "MIT OR Apache-2.0"
@@ -104,6 +107,7 @@ reth-downloaders = { path = "crates/net/downloaders" }
 reth-ecies = { path = "crates/net/ecies" }
 reth-eth-wire = { path = "crates/net/eth-wire" }
 reth-ethereum-forks = { path = "crates/ethereum-forks" }
+reth-ethereum-payload-builder = { path = "crates/payload/ethereum" }
 reth-interfaces = { path = "crates/interfaces" }
 reth-ipc = { path = "crates/rpc/ipc" }
 reth-libmdbx = { path = "crates/storage/libmdbx-rs" }
@@ -116,6 +120,7 @@ reth-network = { path = "crates/net/network" }
 reth-network-api = { path = "crates/net/network-api" }
 reth-nippy-jar = { path = "crates/storage/nippy-jar" }
 reth-payload-builder = { path = "crates/payload/builder" }
+reth-payload-validator = { path = "crates/payload/validator" }
 reth-primitives = { path = "crates/primitives" }
 reth-provider = { path = "crates/storage/provider" }
 reth-prune = { path = "crates/prune" }
@@ -137,7 +142,7 @@ reth-transaction-pool = { path = "crates/transaction-pool" }
 reth-trie = { path = "crates/trie" }
 
 # revm
-revm = { git = "https://github.com/bluealloy/revm", branch = "reth_freeze",  features = ["std", "secp256k1"], default-features = false }
+revm = { git = "https://github.com/bluealloy/revm", branch = "reth_freeze", features = ["std", "secp256k1"], default-features = false }
 revm-primitives = { git = "https://github.com/bluealloy/revm", branch = "reth_freeze", features = ["std"], default-features = false }
 
 # eth
@@ -157,7 +162,7 @@ boa_engine = "0.17"
 boa_gc = "0.17"
 
 # misc
-aquamarine = "0.3"
+aquamarine = "0.4"
 bytes = "1.5"
 bitflags = "2.4"
 clap = "4"
@@ -171,12 +176,13 @@ rand = "0.8.5"
 schnellru = "0.2"
 strum = "0.25"
 rayon = "1.7"
-itertools = "0.11"
+itertools = "0.12"
 parking_lot = "0.12"
 metrics = "0.21.1" # Needed for `metrics-macro` to resolve the crate using `::metrics` notation
 hex-literal = "0.4"
 once_cell = "1.17"
 syn = "2.0"
+ahash = "0.8.6"
 
 # proc-macros
 proc-macro2 = "1.0"
@@ -213,11 +219,16 @@ confy = "0.5"
 toml = "0.8"
 
 # misc-testing
-arbitrary = "1.1"
+arbitrary = "1.3"
 assert_matches = "1.5.0"
 tempfile = "3.8"
 criterion = "0.5"
 pprof = "0.13"
-proptest = "1.0"
+proptest = "1.4"
 proptest-derive = "0.4"
 serial_test = "2"
+
+
+[workspace.metadata.cargo-udeps.ignore]
+# ignored because this is mutually exclusive with the optimism payload builder via feature flags
+normal = ["reth-ethereum-payload-builder"]
