@@ -1,4 +1,5 @@
 //! Wrapper for `std::fs` methods
+
 use std::{
     fs::{self, ReadDir},
     io,
@@ -106,6 +107,14 @@ type Result<T> = std::result::Result<T, FsPathError>;
 pub fn read_to_string(path: impl AsRef<Path>) -> Result<String> {
     let path = path.as_ref();
     fs::read_to_string(path).map_err(|err| FsPathError::read(err, path))
+}
+
+/// Read the entire contents of a file into a bytes vector.
+///
+/// Wrapper for `std::fs::read`
+pub fn read(path: impl AsRef<Path>) -> Result<Vec<u8>> {
+    let path = path.as_ref();
+    fs::read(path).map_err(|err| FsPathError::read(err, path))
 }
 
 /// Wrapper for `std::fs::write`
