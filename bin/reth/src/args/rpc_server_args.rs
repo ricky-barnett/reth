@@ -18,6 +18,7 @@ use clap::{
 };
 use futures::TryFutureExt;
 use reth_network_api::{NetworkInfo, Peers};
+use reth_node_api::EngineTypes;
 use reth_provider::{
     AccountReader, BlockReaderIdExt, CanonStateSubscriptions, ChainSpecProvider, ChangeSetReader,
     EvmEnvProvider, HeaderProvider, StateProviderFactory,
@@ -224,7 +225,7 @@ impl RpcServerArgs {
     /// Returns the handles for the launched regular RPC server(s) (if any) and the server handle
     /// for the auth server that handles the `engine_` API that's accessed by the consensus
     /// layer.
-    pub async fn start_servers<Reth, Engine, Conf>(
+    pub async fn start_servers<Reth, Engine, Conf, EngineT: EngineTypes>(
         &self,
         components: &Reth,
         engine_api: Engine,
@@ -233,7 +234,7 @@ impl RpcServerArgs {
     ) -> eyre::Result<RethRpcServerHandles>
     where
         Reth: RethNodeComponents,
-        Engine: EngineApiServer,
+        Engine: EngineApiServer<EngineT>,
         Conf: RethNodeCommandConfig,
     {
         let auth_config = self.auth_server_config(jwt_secret)?;
@@ -241,7 +242,7 @@ impl RpcServerArgs {
         let module_config = self.transport_rpc_module_config();
         debug!(target: "reth::cli", http=?module_config.http(), ws=?module_config.ws(), "Using RPC module config");
 
-        let (mut modules, auth_module, mut registry) = RpcModuleBuilder::default()
+        let (mut modules, mut auth_module, mut registry) = RpcModuleBuilder::default()
             .with_provider(components.provider())
             .with_pool(components.pool())
             .with_network(components.network())
@@ -249,7 +250,11 @@ impl RpcServerArgs {
             .with_executor(components.task_executor())
             .build_with_auth_server(module_config, engine_api);
 
-        let rpc_components = RethRpcComponents { registry: &mut registry, modules: &mut modules };
+        let rpc_components = RethRpcComponents {
+            registry: &mut registry,
+            modules: &mut modules,
+            auth_module: &mut auth_module,
+        };
         // apply configured customization
         conf.extend_rpc_modules(self, components, rpc_components)?;
 
@@ -267,7 +272,7 @@ impl RpcServerArgs {
             handle
         });
 
-        let launch_auth = auth_module.start_server(auth_config).map_ok(|handle| {
+        let launch_auth = auth_module.clone().start_server(auth_config).map_ok(|handle| {
             let addr = handle.local_addr();
             info!(target: "reth::cli", url=%addr, "RPC auth server started");
             handle
@@ -278,7 +283,11 @@ impl RpcServerArgs {
         let handles = RethRpcServerHandles { rpc, auth };
 
         // call hook
-        let rpc_components = RethRpcComponents { registry: &mut registry, modules: &mut modules };
+        let rpc_components = RethRpcComponents {
+            registry: &mut registry,
+            modules: &mut modules,
+            auth_module: &mut auth_module,
+        };
         conf.on_rpc_server_started(self, components, rpc_components, handles.clone())?;
 
         Ok(handles)
@@ -322,13 +331,13 @@ impl RpcServerArgs {
     }
 
     /// Create Engine API server.
-    pub async fn start_auth_server<Provider, Pool, Network, Tasks>(
+    pub async fn start_auth_server<Provider, Pool, Network, Tasks, EngineT>(
         &self,
         provider: Provider,
         pool: Pool,
         network: Network,
         executor: Tasks,
-        engine_api: EngineApi<Provider>,
+        engine_api: EngineApi<Provider, EngineT>,
         jwt_secret: JwtSecret,
     ) -> Result<AuthServerHandle, RpcError>
     where
@@ -343,6 +352,7 @@ impl RpcServerArgs {
         Pool: TransactionPool + Clone + 'static,
         Network: NetworkInfo + Peers + Clone + 'static,
         Tasks: TaskSpawner + Clone + 'static,
+        EngineT: EngineTypes + 'static,
     {
         let socket_address = SocketAddr::new(self.auth_addr, self.auth_port);
 
