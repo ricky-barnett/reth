@@ -4,7 +4,7 @@ name: 'reth'
 services:
   reth:
     restart: unless-stopped
-    image: ghcr.io/paradigmxyz/reth
+    image: ghcr.io/paradigmxyz/reth:latest
     ports:
       - '9001:9001' # metrics
       - '30303:30303' # eth/66 peering
@@ -27,7 +27,7 @@ services:
       --authrpc.addr 0.0.0.0
       --authrpc.port 8551
       --authrpc.jwtsecret /root/jwt/jwt.hex
-      --rpc.jwtsecret ${JWT_SECRET}
+      # --rpc.jwtsecret ${JWT_SECRET}
       --http --http.addr 0.0.0.0 --http.port 8545
       --http.corsdomain "*"
       --http.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
