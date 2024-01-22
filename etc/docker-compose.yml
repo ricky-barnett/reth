@@ -32,6 +32,7 @@ services:
       --ws --ws.addr 0.0.0.0 --ws.port 8546
       --ws.origins "*"
       --ws.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
+      --rpc-max-response-size 9999999
 
   simulator:
     restart: unless-stopped
