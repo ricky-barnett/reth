@@ -41,6 +41,7 @@ services:
             - ./jwttoken:/root/jwt:ro
         ports:
             - "7000:7000" # rpc
+            - "9003:9003"
         command: >
             op-node
               --l1=ws://reth:8546
