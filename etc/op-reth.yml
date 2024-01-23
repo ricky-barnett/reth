@@ -1,0 +1,56 @@
+version: "3.9"
+name: "reth"
+
+services:
+    op-reth:
+        restart: unless-stopped
+        image: rickybarnett/op-reth
+        ports:
+            - "9002:9002" # metrics
+            - "30304:30304" # eth/66 peering
+            - "7545:7545" # rpc
+            - "7546:7546" # ws
+            - "9551:9551" # engine
+        volumes:
+            - ~/rethdata_base:/root/.local/share/reth/base/db
+            - ~/rethlogs:/root/rethlogs
+            - ./jwttoken:/root/jwt:ro
+        # For Sepolia, replace `--chain mainnet` with `--chain sepolia`
+        command: >
+            node
+            --chain base
+            --rollup.sequencer-http https://sequencer.base.org
+            --authrpc.addr 0.0.0.0
+            --authrpc.port 9551
+            --authrpc.jwtsecret /root/jwt/jwt.hex
+            --http --http.addr 0.0.0.0 --http.port 7545
+            --http.corsdomain "*"
+            --http.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
+            --ws --ws.addr 0.0.0.0 --ws.port 7546
+            --ws.origins "*"
+            --ws.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
+            --rpc-max-response-size 9999999
+        depends_on:
+            - reth
+
+    op-node:
+        image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node@sha256:7588625b425bd869f60191bfd0e836b6966e10bf3f483ed8d30b68c2413c41ca
+        restart: unless-stopped
+        volumes:
+            - ./rollup:/root/rollup
+            - ./jwttoken:/root/jwt:ro
+        command:
+            - --l1=http://reth:8551
+            - --l2=http://op-reth:9551
+            - --rollup.config=/root/rollup/rollup.jsos
+            - --l2.jwt-secret=/root/jwt/jwt.hex
+            - --rpc.addr=0.0.0.0
+            - --rpc.port=7000
+            - --l1.trustrpc
+        depends_on:
+            - reth
+            - op-reth
+
+volumes:
+    rethdata_base:
+        driver: local
