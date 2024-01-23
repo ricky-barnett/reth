@@ -124,6 +124,14 @@ pub enum NewPooledTransactionHashes {
 // === impl NewPooledTransactionHashes ===
 
 impl NewPooledTransactionHashes {
+    /// Returns the message [`EthVersion`].
+    pub fn version(&self) -> EthVersion {
+        match self {
+            NewPooledTransactionHashes::Eth66(_) => EthVersion::Eth66,
+            NewPooledTransactionHashes::Eth68(_) => EthVersion::Eth68,
+        }
+    }
+
     /// Returns `true` if the payload is valid for the given version
     pub fn is_valid_for_version(&self, version: EthVersion) -> bool {
         match self {
@@ -141,6 +149,14 @@ impl NewPooledTransactionHashes {
         match self {
             NewPooledTransactionHashes::Eth66(msg) => msg.0.iter(),
             NewPooledTransactionHashes::Eth68(msg) => msg.hashes.iter(),
+        }
+    }
+
+    /// Returns a mutable reference to transaction hashes.
+    pub fn hashes_mut(&mut self) -> &mut Vec<B256> {
+        match self {
+            NewPooledTransactionHashes::Eth66(msg) => &mut msg.0,
+            NewPooledTransactionHashes::Eth68(msg) => &mut msg.hashes,
         }
     }
 
@@ -186,6 +202,15 @@ impl NewPooledTransactionHashes {
         match self {
             NewPooledTransactionHashes::Eth66(msg) => msg.0.len(),
             NewPooledTransactionHashes::Eth68(msg) => msg.hashes.len(),
+        }
+    }
+
+    /// Returns an iterator over tx hashes zipped with corresponding eth68 metadata if this is
+    /// an eth68 message.
+    pub fn as_eth68(&self) -> Option<&NewPooledTransactionHashes68> {
+        match self {
+            NewPooledTransactionHashes::Eth66(_) => None,
+            NewPooledTransactionHashes::Eth68(msg) => Some(msg),
         }
     }
 }
@@ -263,6 +288,13 @@ pub struct NewPooledTransactionHashes68 {
     pub sizes: Vec<usize>,
     /// Transaction hashes for new transactions that have appeared on the network.
     pub hashes: Vec<B256>,
+}
+
+impl NewPooledTransactionHashes68 {
+    /// Returns an iterator over tx hashes zipped with corresponding metadata.
+    pub fn metadata_iter(&self) -> impl Iterator<Item = (&B256, (u8, usize))> {
+        self.hashes.iter().zip(self.types.iter().copied().zip(self.sizes.iter().copied()))
+    }
 }
 
 impl Encodable for NewPooledTransactionHashes68 {
