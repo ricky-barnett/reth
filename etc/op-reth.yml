@@ -43,7 +43,7 @@ services:
             - "7000:7000" # rpc
         command: >
             op-node
-              --l1=http://reth:8551
+              --l1=http://reth:8545
               --l2=http://op-reth:9551
               --rollup.config=/root/rollup/rollup.json
               --l2.jwt-secret=/root/jwt/jwt.hex
