@@ -51,7 +51,7 @@ services:
               --rpc.addr=0.0.0.0
               --rpc.port=7000
               --l1.trustrpc
-              --l1.rpckind=reth_db
+              --l1.rpckind=rethdb
               --l1.rethdb=/root/.local/share/reth/mainnet/db
         depends_on:
             - reth
