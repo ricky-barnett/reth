@@ -81,7 +81,7 @@ services:
                    /run.sh"
 
 volumes:
-  rethdata_base:
+    rethdata_base:
         driver: local
     rethdata_mainnet:
         driver: local
