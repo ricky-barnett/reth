@@ -6,7 +6,7 @@ services:
         restart: unless-stopped
         image: sigp/lighthouse
         depends_on:
-            - op-reth
+            - reth
         ports:
             - "5052:5052/tcp" # rpc
             - "5053:5053/tcp"
@@ -32,7 +32,7 @@ services:
         restart: unless-stopped
         image: ethpandaops/ethereum-metrics-exporter:debian-latest
         depends_on:
-            - op-reth
+            - reth
             - lighthouse
         ports:
             - 9091:9091 # metrics
