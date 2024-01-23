@@ -42,7 +42,7 @@ services:
         command:
             - --l1=http://reth:8551
             - --l2=http://op-reth:9551
-            - --rollup.config=/root/rollup/rollup.jsos
+            - --rollup.config=/root/rollup/rollup.json
             - --l2.jwt-secret=/root/jwt/jwt.hex
             - --rpc.addr=0.0.0.0
             - --rpc.port=7000
