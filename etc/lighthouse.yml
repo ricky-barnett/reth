@@ -32,7 +32,7 @@ services:
         restart: unless-stopped
         image: ethpandaops/ethereum-metrics-exporter:debian-latest
         depends_on:
-            - reth
+            - op-reth
             - lighthouse
         ports:
             - 9091:9091 # metrics
