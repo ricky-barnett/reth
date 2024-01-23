@@ -34,10 +34,10 @@ services:
             - reth
 
     op-node:
-        image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node@sha256:7588625b425bd869f60191bfd0e836b6966e10bf3f483ed8d30b68c2413c41ca
+        image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node:latest
         restart: unless-stopped
         volumes:
-            - ./rollup:/root/rollup
+            - ./rollup:/root/rollup:ro
             - ./jwttoken:/root/jwt:ro
         ports:
             - "7000:7000" # rpc
@@ -45,12 +45,12 @@ services:
         command: >
             op-node
               --l1=ws://reth:8546
+              --l1.trustrpc
               --l2=ws://op-reth:9551
-              --rollup.config=/root/rollup/rollup.json
               --l2.jwt-secret=/root/jwt/jwt.hex
+              --rollup.config=/root/rollup/rollup.json
               --rpc.addr=0.0.0.0
               --rpc.port=7000
-              --l1.trustrpc
         depends_on:
             - reth
             - op-reth
