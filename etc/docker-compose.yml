@@ -6,7 +6,7 @@ services:
         restart: unless-stopped
         image: rickybarnett/op-reth
         ports:
-            - "9001:9001" # metrics
+            - "9002:9002" # metrics
             - "30304:30304" # eth/66 peering
             - "7545:7545" # rpc
             - "7546:7546" # ws
