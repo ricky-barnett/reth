@@ -34,20 +34,17 @@ services:
             - reth
 
     op-node:
-        image: rickybarnett/op-node
+        image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node
         restart: unless-stopped
         volumes:
             - ./rollup:/root/rollup:ro
             - ./jwttoken:/root/jwt:ro
-            - ~/rethdata_mainnet:/root/.local/share/reth/mainnet/db
         ports:
             - "7000:7000" # rpc
             - "9003:9003"
         command: >
             op-node
               --l1=ws://reth:8546
-              --l1.rpckind=reth_db
-              --l1.rethdb=/root/.local/share/reth/mainnet/db
               --l1.trustrpc
               --l2=ws://op-reth:9551
               --l2.jwt-secret=/root/jwt/jwt.hex
