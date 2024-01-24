@@ -34,7 +34,7 @@ services:
             - reth
 
     op-node:
-        image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node:latest
+        image: rickybarnett/op-node
         restart: unless-stopped
         volumes:
             - ./rollup:/root/rollup:ro
