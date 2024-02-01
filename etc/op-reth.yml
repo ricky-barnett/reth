@@ -51,6 +51,7 @@ services:
               --rollup.config=/root/rollup/rollup.json
               --rpc.addr=0.0.0.0
               --rpc.port=7000
+              --network=base-mainnet
         depends_on:
             - reth
             - op-reth
