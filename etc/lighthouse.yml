@@ -26,7 +26,7 @@ services:
             --execution-endpoint http://reth:8551
             --metrics --metrics-address 0.0.0.0
             --execution-jwt /root/jwt/jwt.hex
-            --checkpoint-sync-url https://sepolia.checkpoint-sync.ethpandaops.io
+            --checkpoint-sync-url https://beaconstate-sepolia.chainsafe.io
 
     metrics-exporter:
         restart: unless-stopped
