@@ -17,20 +17,21 @@ services:
             - ./jwttoken:/root/jwt:ro
         # For Sepolia, replace `--chain mainnet` with `--chain sepolia`
         command: >
-            node
-            --chain sepolia
-            --metrics 0.0.0.0:9001
-            --log.file.directory /root/rethlogs
-            --authrpc.addr 0.0.0.0
-            --authrpc.port 8551
-            --authrpc.jwtsecret /root/jwt/jwt.hex
-            --http --http.addr 0.0.0.0 --http.port 8545
-            --http.corsdomain "*"
-            --http.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
-            --ws --ws.addr 0.0.0.0 --ws.port 8546
-            --ws.origins "*"
-            --ws.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
-            --rpc-max-response-size 9999999
+            stage drop merkle --chain sepolia --datadit /root/.local/share/reth/sepolia/db
+            # node
+            # --chain sepolia
+            # --metrics 0.0.0.0:9001
+            # --log.file.directory /root/rethlogs
+            # --authrpc.addr 0.0.0.0
+            # --authrpc.port 8551
+            # --authrpc.jwtsecret /root/jwt/jwt.hex
+            # --http --http.addr 0.0.0.0 --http.port 8545
+            # --http.corsdomain "*"
+            # --http.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
+            # --ws --ws.addr 0.0.0.0 --ws.port 8546
+            # --ws.origins "*"
+            # --ws.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
+            # --rpc-max-response-size 9999999
 
     simulator:
         restart: unless-stopped
