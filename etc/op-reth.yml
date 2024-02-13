@@ -3,13 +3,13 @@ name: "reth"
 
 services:
     geth-init:
-    image: blastio/blast-geth:testnet-sepolia
-    volumes:
-        - ./rollup:/root/rollup:ro
-        - ~/blast:/blast
-    entrypoint: /bin/sh
-    command: >
-        -c "[ ! -d /blast/blast-geth-data/geth ] && /usr/local/bin/geth init --datadir=/blast/blast-geth-data /root/rollup/genesis.json || exit 0"
+        image: blastio/blast-geth:testnet-sepolia
+        volumes:
+            - ./rollup:/root/rollup:ro
+            - ~/blast:/blast
+        entrypoint: /bin/sh
+        command: >
+            -c "[ ! -d /blast/blast-geth-data/geth ] && /usr/local/bin/geth init --datadir=/blast/blast-geth-data /root/rollup/genesis.json || exit 0"
     blast-geth:
         image: blastio/blast-geth:testnet-sepolia
         volumes:
@@ -42,8 +42,8 @@ services:
             --rollup.disabletxpoolgossip=true
             --rollup.sequencerhttp=https://sequencer.s2.testblast.io
         depends_on:
-        geth-init:
-            condition: service_completed_successfully
+            geth-init:
+                condition: service_completed_successfully
     op-node:
         image: blastio/blast-optimism:testnet-sepolia
         restart: unless-stopped
