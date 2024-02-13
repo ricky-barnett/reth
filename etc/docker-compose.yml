@@ -17,7 +17,7 @@ services:
             - ./jwttoken:/root/jwt:ro
         # For Sepolia, replace `--chain mainnet` with `--chain sepolia`
         command: >
-            stage drop merkle --chain sepolia --datadit /root/.local/share/reth/sepolia/db
+            stage drop merkle --chain sepolia --datadir /root/.local/share/reth/sepolia/db
             # node
             # --chain sepolia
             # --metrics 0.0.0.0:9001
