@@ -21,12 +21,12 @@ services:
         # - Use different checkpoint sync URL: `--checkpoint-sync-url https://sepolia.checkpoint-sync.ethpandaops.io`
         command: >
             lighthouse bn
-            --network sepolia
+            --network mainnet
             --http --http-address 0.0.0.0
             --execution-endpoint http://reth:8551
             --metrics --metrics-address 0.0.0.0
             --execution-jwt /root/jwt/jwt.hex
-            --checkpoint-sync-url https://checkpoint-sync.sepolia.ethpandaops.io
+            --checkpoint-sync-url https://mainnet.checkpoint.sigp.io
 
     metrics-exporter:
         restart: unless-stopped
