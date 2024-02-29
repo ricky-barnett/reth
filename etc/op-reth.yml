@@ -3,7 +3,7 @@ name: "reth"
 
 services:
     geth-init:
-        image: blastio/blast-geth:latest
+        image: blastio/blast-geth:mainnet
         volumes:
             - ./rollup:/root/rollup:ro
             - ~/blast:/blast
@@ -11,7 +11,7 @@ services:
         command: >
             -c "[ ! -d /blast/blast-geth-data/geth ] && /usr/local/bin/geth init --datadir=/blast/blast-geth-data /root/rollup/genesis.json || exit 0"
     blast-geth:
-        image: blastio/blast-geth:latest
+        image: blastio/blast-geth:mainnet
         volumes:
             - ~/blast:/blast
             - ./jwttoken:/root/jwt:ro
@@ -45,7 +45,7 @@ services:
             geth-init:
                 condition: service_completed_successfully
     op-node:
-        image: blastio/blast-optimism:latest
+        image: blastio/blast-optimism:mainnet
         restart: unless-stopped
         volumes:
             - ./rollup:/root/rollup:ro
