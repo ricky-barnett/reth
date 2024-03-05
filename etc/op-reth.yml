@@ -19,7 +19,7 @@ services:
         command: >
             node
             --chain base
-            --rollup.sequencer-http https://sequencer.base.org
+            --rollup.sequencer-http https://mainnet-sequencer.base.org
             --authrpc.addr 0.0.0.0
             --authrpc.port 9551
             --authrpc.jwtsecret /root/jwt/jwt.hex
