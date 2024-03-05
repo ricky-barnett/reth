@@ -52,7 +52,7 @@ services:
               --rpc.addr=0.0.0.0
               --rpc.port=7000
               --network=base-mainnet
-              --l1.beacon=ws://lighthouse:5053
+              --l1.beacon=http://lighthouse:5052
         depends_on:
             - reth
             - op-reth
