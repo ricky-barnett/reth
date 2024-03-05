@@ -1,8 +1,8 @@
 use crate::{
     config::NetworkMode, discovery::DiscoveryEvent, manager::NetworkEvent, message::PeerRequest,
-    peers::PeersHandle, protocol::RlpxSubProtocol, FetchClient,
+    peers::PeersHandle, protocol::RlpxSubProtocol, swarm::NetworkConnectionState,
+    transactions::TransactionsHandle, FetchClient,
 };
-use async_trait::async_trait;
 use parking_lot::Mutex;
 use reth_eth_wire::{DisconnectReason, NewBlock, NewPooledTransactionHashes, SharedTransactions};
 use reth_interfaces::sync::{NetworkSyncUpdater, SyncState, SyncStateProvider};
@@ -112,9 +112,9 @@ impl NetworkHandle {
 
     /// Announce a block over devp2p
     ///
-    /// Caution: in PoS this is a noop, since new block are no longer announced over devp2p, but are
-    /// instead sent to node node by the CL. However, they can still be requested over devp2p, but
-    /// broadcasting them is a considered a protocol violation..
+    /// Caution: in PoS this is a noop because new blocks are no longer announced over devp2p.
+    /// Instead they are sent to the node by CL and can be requested over devp2p.
+    /// Broadcasting new blocks is considered a protocol violation.
     pub fn announce_block(&self, block: NewBlock, hash: B256) {
         self.send_message(NetworkHandleMessage::AnnounceBlock(block, hash))
     }
@@ -137,6 +137,15 @@ impl NetworkHandle {
         })
     }
 
+    /// Send message to get the [`TransactionsHandle`].
+    ///
+    /// Returns `None` if no transaction task is installed.
+    pub async fn transactions_handle(&self) -> Option<TransactionsHandle> {
+        let (tx, rx) = oneshot::channel();
+        let _ = self.manager().send(NetworkHandleMessage::GetTransactionsHandle(tx));
+        rx.await.unwrap()
+    }
+
     /// Provides a shareable reference to the [`BandwidthMeter`] stored on the `NetworkInner`.
     pub fn bandwidth_meter(&self) -> &BandwidthMeter {
         &self.inner.bandwidth_meter
@@ -150,6 +159,25 @@ impl NetworkHandle {
         let (tx, rx) = oneshot::channel();
         self.send_message(NetworkHandleMessage::Shutdown(tx));
         rx.await
+    }
+
+    /// Set network connection state to Active.
+    ///
+    /// New outbound connections will be established if there's capacity.
+    pub fn set_network_active(&self) {
+        self.set_network_conn(NetworkConnectionState::Active);
+    }
+
+    /// Set network connection state to Hibernate.
+    ///
+    /// No new outbound connections will be established.
+    pub fn set_network_hibernate(&self) {
+        self.set_network_conn(NetworkConnectionState::Hibernate);
+    }
+
+    /// Set network connection state.
+    fn set_network_conn(&self, network_conn: NetworkConnectionState) {
+        self.send_message(NetworkHandleMessage::SetNetworkState(network_conn));
     }
 
     /// Whether tx gossip is disabled
@@ -207,7 +235,6 @@ impl PeersInfo for NetworkHandle {
     }
 }
 
-#[async_trait]
 impl Peers for NetworkHandle {
     /// Sends a message to the [`NetworkManager`](crate::NetworkManager) to add a peer to the known
     /// set, with the given kind.
@@ -269,7 +296,6 @@ impl Peers for NetworkHandle {
     }
 }
 
-#[async_trait]
 impl NetworkInfo for NetworkHandle {
     fn local_addr(&self) -> SocketAddr {
         *self.inner.listener_address.lock()
@@ -430,8 +456,12 @@ pub(crate) enum NetworkHandleMessage {
     GetPeerInfosByPeerKind(PeerKind, oneshot::Sender<Vec<PeerInfo>>),
     /// Gets the reputation for a specific peer via a oneshot sender.
     GetReputationById(PeerId, oneshot::Sender<Option<Reputation>>),
+    /// Retrieves the `TransactionsHandle` via a oneshot sender.
+    GetTransactionsHandle(oneshot::Sender<Option<TransactionsHandle>>),
     /// Initiates a graceful shutdown of the network via a oneshot sender.
     Shutdown(oneshot::Sender<()>),
+    /// Sets the network state between hibernation and active.
+    SetNetworkState(NetworkConnectionState),
     /// Adds a new listener for `DiscoveryEvent`.
     DiscoveryListener(UnboundedSender<DiscoveryEvent>),
     /// Adds an additional `RlpxSubProtocol`.

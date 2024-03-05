@@ -1,3 +1,18 @@
+use crate::{
+    args::DatabaseArgs,
+    dirs::{DataDirPath, PlatformPath},
+    utils::DbTool,
+};
+use clap::Parser;
+use reth_db::{
+    cursor::DbCursorRO, database::Database, mdbx::DatabaseArguments, open_db_read_only,
+    table::Table, transaction::DbTx, AccountChangeSets, AccountsHistory, AccountsTrie,
+    BlockBodyIndices, BlockOmmers, BlockWithdrawals, Bytecodes, CanonicalHeaders, DatabaseEnv,
+    HashedAccounts, HashedStorages, HeaderNumbers, HeaderTerminalDifficulties, Headers,
+    PlainAccountState, PlainStorageState, PruneCheckpoints, Receipts, StageCheckpointProgresses,
+    StageCheckpoints, StorageChangeSets, StoragesHistory, StoragesTrie, Tables, TransactionBlocks,
+    TransactionHashNumbers, TransactionSenders, Transactions,
+};
 use std::{
     collections::HashMap,
     fmt::Debug,
@@ -5,22 +20,6 @@ use std::{
     hash::Hash,
     io::Write,
     path::{Path, PathBuf},
-};
-
-use crate::utils::DbTool;
-use clap::Parser;
-
-use crate::{
-    args::DatabaseArgs,
-    dirs::{DataDirPath, PlatformPath},
-};
-use reth_db::{
-    cursor::DbCursorRO, database::Database, mdbx::DatabaseArguments, open_db_read_only,
-    table::Table, transaction::DbTx, AccountChangeSet, AccountHistory, AccountsTrie,
-    BlockBodyIndices, BlockOmmers, BlockWithdrawals, Bytecodes, CanonicalHeaders, DatabaseEnv,
-    HashedAccount, HashedStorage, HeaderNumbers, HeaderTD, Headers, PlainAccountState,
-    PlainStorageState, PruneCheckpoints, Receipts, StorageChangeSet, StorageHistory, StoragesTrie,
-    SyncStage, SyncStageProgress, Tables, TransactionBlock, Transactions, TxHashNumber, TxSenders,
 };
 use tracing::info;
 
@@ -32,7 +31,7 @@ pub struct Command {
     secondary_datadir: PlatformPath<DataDirPath>,
 
     /// Arguments for the second database
-    #[clap(flatten)]
+    #[command(flatten)]
     second_db: DatabaseArgs,
 
     /// The table name to diff. If not specified, all tables are diffed.
@@ -58,7 +57,7 @@ impl Command {
     ///
     /// The discrepancies and extra elements, along with a brief summary of the diff results are
     /// then written to a file in the output directory.
-    pub fn execute(self, tool: &DbTool<'_, DatabaseEnv>) -> eyre::Result<()> {
+    pub fn execute(self, tool: &DbTool<DatabaseEnv>) -> eyre::Result<()> {
         // open second db
         let second_db_path: PathBuf = self.secondary_datadir.join("db").into();
         let second_db = open_db_read_only(
@@ -66,13 +65,13 @@ impl Command {
             DatabaseArguments::default().log_level(self.second_db.log_level),
         )?;
 
-        let tables = match self.table {
-            Some(table) => vec![table],
-            None => Tables::ALL.to_vec(),
+        let tables = match &self.table {
+            Some(table) => std::slice::from_ref(table),
+            None => Tables::ALL,
         };
 
         for table in tables {
-            let primary_tx = tool.db.tx()?;
+            let primary_tx = tool.provider_factory.db_ref().tx()?;
             let secondary_tx = second_db.tx()?;
 
             let output_dir = self.output.clone();
@@ -80,7 +79,9 @@ impl Command {
                 Tables::CanonicalHeaders => {
                     find_diffs::<CanonicalHeaders>(primary_tx, secondary_tx, output_dir)?
                 }
-                Tables::HeaderTD => find_diffs::<HeaderTD>(primary_tx, secondary_tx, output_dir)?,
+                Tables::HeaderTerminalDifficulties => {
+                    find_diffs::<HeaderTerminalDifficulties>(primary_tx, secondary_tx, output_dir)?
+                }
                 Tables::HeaderNumbers => {
                     find_diffs::<HeaderNumbers>(primary_tx, secondary_tx, output_dir)?
                 }
@@ -94,14 +95,14 @@ impl Command {
                 Tables::BlockWithdrawals => {
                     find_diffs::<BlockWithdrawals>(primary_tx, secondary_tx, output_dir)?
                 }
-                Tables::TransactionBlock => {
-                    find_diffs::<TransactionBlock>(primary_tx, secondary_tx, output_dir)?
+                Tables::TransactionBlocks => {
+                    find_diffs::<TransactionBlocks>(primary_tx, secondary_tx, output_dir)?
                 }
                 Tables::Transactions => {
                     find_diffs::<Transactions>(primary_tx, secondary_tx, output_dir)?
                 }
-                Tables::TxHashNumber => {
-                    find_diffs::<TxHashNumber>(primary_tx, secondary_tx, output_dir)?
+                Tables::TransactionHashNumbers => {
+                    find_diffs::<TransactionHashNumbers>(primary_tx, secondary_tx, output_dir)?
                 }
                 Tables::Receipts => find_diffs::<Receipts>(primary_tx, secondary_tx, output_dir)?,
                 Tables::PlainAccountState => {
@@ -111,23 +112,23 @@ impl Command {
                     find_diffs::<PlainStorageState>(primary_tx, secondary_tx, output_dir)?
                 }
                 Tables::Bytecodes => find_diffs::<Bytecodes>(primary_tx, secondary_tx, output_dir)?,
-                Tables::AccountHistory => {
-                    find_diffs::<AccountHistory>(primary_tx, secondary_tx, output_dir)?
+                Tables::AccountsHistory => {
+                    find_diffs::<AccountsHistory>(primary_tx, secondary_tx, output_dir)?
                 }
-                Tables::StorageHistory => {
-                    find_diffs::<StorageHistory>(primary_tx, secondary_tx, output_dir)?
+                Tables::StoragesHistory => {
+                    find_diffs::<StoragesHistory>(primary_tx, secondary_tx, output_dir)?
                 }
-                Tables::AccountChangeSet => {
-                    find_diffs::<AccountChangeSet>(primary_tx, secondary_tx, output_dir)?
+                Tables::AccountChangeSets => {
+                    find_diffs::<AccountChangeSets>(primary_tx, secondary_tx, output_dir)?
                 }
-                Tables::StorageChangeSet => {
-                    find_diffs::<StorageChangeSet>(primary_tx, secondary_tx, output_dir)?
+                Tables::StorageChangeSets => {
+                    find_diffs::<StorageChangeSets>(primary_tx, secondary_tx, output_dir)?
                 }
-                Tables::HashedAccount => {
-                    find_diffs::<HashedAccount>(primary_tx, secondary_tx, output_dir)?
+                Tables::HashedAccounts => {
+                    find_diffs::<HashedAccounts>(primary_tx, secondary_tx, output_dir)?
                 }
-                Tables::HashedStorage => {
-                    find_diffs::<HashedStorage>(primary_tx, secondary_tx, output_dir)?
+                Tables::HashedStorages => {
+                    find_diffs::<HashedStorages>(primary_tx, secondary_tx, output_dir)?
                 }
                 Tables::AccountsTrie => {
                     find_diffs::<AccountsTrie>(primary_tx, secondary_tx, output_dir)?
@@ -135,10 +136,14 @@ impl Command {
                 Tables::StoragesTrie => {
                     find_diffs::<StoragesTrie>(primary_tx, secondary_tx, output_dir)?
                 }
-                Tables::TxSenders => find_diffs::<TxSenders>(primary_tx, secondary_tx, output_dir)?,
-                Tables::SyncStage => find_diffs::<SyncStage>(primary_tx, secondary_tx, output_dir)?,
-                Tables::SyncStageProgress => {
-                    find_diffs::<SyncStageProgress>(primary_tx, secondary_tx, output_dir)?
+                Tables::TransactionSenders => {
+                    find_diffs::<TransactionSenders>(primary_tx, secondary_tx, output_dir)?
+                }
+                Tables::StageCheckpoints => {
+                    find_diffs::<StageCheckpoints>(primary_tx, secondary_tx, output_dir)?
+                }
+                Tables::StageCheckpointProgresses => {
+                    find_diffs::<StageCheckpointProgresses>(primary_tx, secondary_tx, output_dir)?
                 }
                 Tables::PruneCheckpoints => {
                     find_diffs::<PruneCheckpoints>(primary_tx, secondary_tx, output_dir)?
@@ -160,19 +165,19 @@ where
     T::Key: Hash,
     T::Value: PartialEq,
 {
-    let table_name = T::NAME;
+    let table = T::TABLE;
 
-    info!("Analyzing table {table_name}...");
+    info!("Analyzing table {table}...");
     let result = find_diffs_advanced::<T>(&primary_tx, &secondary_tx)?;
-    info!("Done analyzing table {table_name}!");
+    info!("Done analyzing table {table}!");
 
     // Pretty info summary header: newline then header
     info!("");
-    info!("Diff results for {table_name}:");
+    info!("Diff results for {table}:");
 
     // create directory and open file
     fs::create_dir_all(output_dir.as_ref())?;
-    let file_name = format!("{table_name}.txt");
+    let file_name = format!("{table}.txt");
     let mut file = File::create(output_dir.as_ref().join(file_name.clone()))?;
 
     // analyze the result and print some stats
@@ -180,36 +185,36 @@ where
     let extra_elements = result.extra_elements.len();
 
     // Make a pretty summary header for the table
-    writeln!(file, "Diff results for {table_name}")?;
+    writeln!(file, "Diff results for {table}")?;
 
     if discrepancies > 0 {
         // write to file
-        writeln!(file, "Found {discrepancies} discrepancies in table {table_name}")?;
+        writeln!(file, "Found {discrepancies} discrepancies in table {table}")?;
 
         // also print to info
-        info!("Found {discrepancies} discrepancies in table {table_name}");
+        info!("Found {discrepancies} discrepancies in table {table}");
     } else {
         // write to file
-        writeln!(file, "No discrepancies found in table {table_name}")?;
+        writeln!(file, "No discrepancies found in table {table}")?;
 
         // also print to info
-        info!("No discrepancies found in table {table_name}");
+        info!("No discrepancies found in table {table}");
     }
 
     if extra_elements > 0 {
         // write to file
-        writeln!(file, "Found {extra_elements} extra elements in table {table_name}")?;
+        writeln!(file, "Found {extra_elements} extra elements in table {table}")?;
 
         // also print to info
-        info!("Found {extra_elements} extra elements in table {table_name}");
+        info!("Found {extra_elements} extra elements in table {table}");
     } else {
-        writeln!(file, "No extra elements found in table {table_name}")?;
+        writeln!(file, "No extra elements found in table {table}")?;
 
         // also print to info
-        info!("No extra elements found in table {table_name}");
+        info!("No extra elements found in table {table}");
     }
 
-    info!("Writing diff results for {table_name} to {file_name}...");
+    info!("Writing diff results for {table} to {file_name}...");
 
     if discrepancies > 0 {
         writeln!(file, "Discrepancies:")?;
@@ -228,7 +233,7 @@ where
     }
 
     let full_file_name = output_dir.as_ref().join(file_name);
-    info!("Done writing diff results for {table_name} to {}", full_file_name.display());
+    info!("Done writing diff results for {table} to {}", full_file_name.display());
     Ok(())
 }
 

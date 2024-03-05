@@ -6,10 +6,8 @@ use crate::{
         utils::{chain_help, genesis_value_parser, SUPPORTED_CHAINS},
         DatabaseArgs, NetworkArgs,
     },
-    commands::node::events,
+    core::cli::runner::CliContext,
     dirs::{DataDirPath, MaybePlatformPath},
-    init::init_genesis,
-    runner::CliContext,
     utils::get_single_header,
 };
 use clap::Parser;
@@ -27,14 +25,18 @@ use reth_interfaces::{
 };
 use reth_network::{NetworkEvents, NetworkHandle};
 use reth_network_api::NetworkInfo;
-
-use reth_primitives::{fs, stage::StageId, BlockHashOrNumber, BlockNumber, ChainSpec, B256};
+use reth_node_core::init::init_genesis;
+use reth_node_ethereum::EthEvmConfig;
+use reth_primitives::{
+    fs, stage::StageId, BlockHashOrNumber, BlockNumber, ChainSpec, PruneModes, B256,
+};
 use reth_provider::{BlockExecutionWriter, HeaderSyncMode, ProviderFactory, StageCheckpointReader};
 use reth_stages::{
     sets::DefaultStages,
-    stages::{ExecutionStage, ExecutionStageThresholds, SenderRecoveryStage, TotalDifficultyStage},
+    stages::{ExecutionStage, ExecutionStageThresholds, SenderRecoveryStage},
     Pipeline, StageSet,
 };
+use reth_static_file::StaticFileProducer;
 use reth_tasks::TaskExecutor;
 use std::{
     net::{SocketAddr, SocketAddrV4},
@@ -69,10 +71,10 @@ pub struct Command {
     )]
     chain: Arc<ChainSpec>,
 
-    #[clap(flatten)]
+    #[command(flatten)]
     network: NetworkArgs,
 
-    #[clap(flatten)]
+    #[command(flatten)]
     db: DatabaseArgs,
 
     /// The maximum block height.
@@ -93,6 +95,7 @@ impl Command {
         consensus: Arc<dyn Consensus>,
         provider_factory: ProviderFactory<DB>,
         task_executor: &TaskExecutor,
+        static_file_producer: StaticFileProducer<DB>,
     ) -> eyre::Result<Pipeline<DB>>
     where
         DB: Database + Unpin + Clone + 'static,
@@ -110,7 +113,8 @@ impl Command {
         let stage_conf = &config.stages;
 
         let (tip_tx, tip_rx) = watch::channel(B256::ZERO);
-        let factory = reth_revm::EvmProcessorFactory::new(self.chain.clone());
+        let factory =
+            reth_revm::EvmProcessorFactory::new(self.chain.clone(), EthEvmConfig::default());
 
         let header_mode = HeaderSyncMode::Tip(tip_rx);
         let pipeline = Pipeline::builder()
@@ -123,10 +127,6 @@ impl Command {
                     header_downloader,
                     body_downloader,
                     factory.clone(),
-                )
-                .set(
-                    TotalDifficultyStage::new(consensus)
-                        .with_commit_threshold(stage_conf.total_difficulty.commit_threshold),
                 )
                 .set(SenderRecoveryStage {
                     commit_threshold: stage_conf.sender_recovery.commit_threshold,
@@ -147,7 +147,7 @@ impl Command {
                     config.prune.clone().map(|prune| prune.segments).unwrap_or_default(),
                 )),
             )
-            .build(provider_factory);
+            .build(provider_factory, static_file_producer);
 
         Ok(pipeline)
     }
@@ -170,7 +170,11 @@ impl Command {
                 self.network.discovery.addr,
                 self.network.discovery.port,
             )))
-            .build(ProviderFactory::new(db, self.chain.clone()))
+            .build(ProviderFactory::new(
+                db,
+                self.chain.clone(),
+                self.datadir.unwrap_or_chain_default(self.chain.chain).static_files_path(),
+            )?)
             .start_network()
             .await?;
         info!(target: "reth::cli", peer_id = %network.peer_id(), local_addr = %network.local_addr(), "Connected to P2P network");
@@ -188,7 +192,7 @@ impl Command {
             match get_single_header(&client, BlockHashOrNumber::Number(block)).await {
                 Ok(tip_header) => {
                     info!(target: "reth::cli", ?block, "Successfully fetched block");
-                    return Ok(tip_header.hash)
+                    return Ok(tip_header.hash())
                 }
                 Err(error) => {
                     error!(target: "reth::cli", ?block, %error, "Failed to fetch the block. Retrying...");
@@ -206,10 +210,11 @@ impl Command {
         fs::create_dir_all(&db_path)?;
         let db =
             Arc::new(init_db(db_path, DatabaseArguments::default().log_level(self.db.log_level))?);
-        let provider_factory = ProviderFactory::new(db.clone(), self.chain.clone());
+        let provider_factory =
+            ProviderFactory::new(db.clone(), self.chain.clone(), data_dir.static_files_path())?;
 
         debug!(target: "reth::cli", chain=%self.chain.chain, genesis=?self.chain.genesis_hash(), "Initializing genesis");
-        init_genesis(db.clone(), self.chain.clone())?;
+        init_genesis(provider_factory.clone())?;
 
         let consensus: Arc<dyn Consensus> = Arc::new(BeaconConsensus::new(Arc::clone(&self.chain)));
 
@@ -226,6 +231,12 @@ impl Command {
             )
             .await?;
 
+        let static_file_producer = StaticFileProducer::new(
+            provider_factory.clone(),
+            provider_factory.static_file_provider(),
+            PruneModes::default(),
+        );
+
         // Configure the pipeline
         let fetch_client = network.fetch_client().await?;
         let mut pipeline = self.build_pipeline(
@@ -234,6 +245,7 @@ impl Command {
             Arc::clone(&consensus),
             provider_factory.clone(),
             &ctx.task_executor,
+            static_file_producer,
         )?;
 
         let provider = provider_factory.provider()?;
@@ -252,7 +264,12 @@ impl Command {
         );
         ctx.task_executor.spawn_critical(
             "events task",
-            events::handle_events(Some(network.clone()), latest_block_number, events, db.clone()),
+            reth_node_core::events::node::handle_events(
+                Some(network.clone()),
+                latest_block_number,
+                events,
+                db.clone(),
+            ),
         );
 
         let mut current_max_block = latest_block_number.unwrap_or_default();

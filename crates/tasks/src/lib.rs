@@ -1,10 +1,15 @@
 //! Reth task management.
+//!
+//! # Feature Flags
+//!
+//! - `rayon`: Enable rayon thread pool for blocking tasks.
 
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/paradigmxyz/reth/main/assets/reth-docs.png",
     html_favicon_url = "https://avatars0.githubusercontent.com/u/97369466?s=256",
     issue_tracker_base_url = "https://github.com/paradigmxyz/reth/issues/"
 )]
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 
 use crate::{
@@ -36,6 +41,9 @@ use tracing_futures::Instrument;
 
 pub mod metrics;
 pub mod shutdown;
+
+#[cfg(feature = "rayon")]
+pub mod pool;
 
 /// A type that can spawn tasks.
 ///
@@ -650,10 +658,7 @@ mod tests {
         let manager = TaskManager::new(handle);
         let executor = manager.executor();
 
-        executor.spawn_critical(
-            "this is a critical task",
-            Box::pin(async { panic!("intentionally panic") }),
-        );
+        executor.spawn_critical("this is a critical task", async { panic!("intentionally panic") });
 
         runtime.block_on(async move {
             let err = manager.await;
@@ -672,13 +677,10 @@ mod tests {
 
         let (signal, shutdown) = signal();
 
-        executor.spawn_critical(
-            "this is a critical task",
-            Box::pin(async move {
-                tokio::time::sleep(Duration::from_millis(200)).await;
-                drop(signal);
-            }),
-        );
+        executor.spawn_critical("this is a critical task", async move {
+            tokio::time::sleep(Duration::from_millis(200)).await;
+            drop(signal);
+        });
 
         drop(manager);
 

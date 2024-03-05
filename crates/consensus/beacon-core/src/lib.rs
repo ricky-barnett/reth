@@ -5,9 +5,8 @@
     html_favicon_url = "https://avatars0.githubusercontent.com/u/97369466?s=256",
     issue_tracker_base_url = "https://github.com/paradigmxyz/reth/issues/"
 )]
+#![cfg_attr(not(test), warn(unused_crate_dependencies))]
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
-
-//! Consensus for ethereum network
 
 use reth_consensus_common::validation;
 use reth_interfaces::consensus::{Consensus, ConsensusError};
@@ -43,7 +42,7 @@ impl Consensus for BeaconConsensus {
         header: &SealedHeader,
         parent: &SealedHeader,
     ) -> Result<(), ConsensusError> {
-        validation::validate_header_regarding_parent(parent, header, &self.chain_spec)?;
+        header.validate_against_parent(parent, &self.chain_spec).map_err(ConsensusError::from)?;
         Ok(())
     }
 

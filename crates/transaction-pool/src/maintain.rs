@@ -59,7 +59,7 @@ pub struct LocalTransactionBackupConfig {
 
 impl LocalTransactionBackupConfig {
     /// Receive path to transactions backup and return initialized config
-    pub fn with_local_txs_backup(transactions_path: PathBuf) -> Self {
+    pub const fn with_local_txs_backup(transactions_path: PathBuf) -> Self {
         Self { transactions_path: Some(transactions_path) }
     }
 }
@@ -106,7 +106,7 @@ pub async fn maintain_transaction_pool<Client, P, St, Tasks>(
         let latest = latest.seal_slow();
         let chain_spec = client.chain_spec();
         let info = BlockInfo {
-            last_seen_block_hash: latest.hash,
+            last_seen_block_hash: latest.hash(),
             last_seen_block_number: latest.number,
             pending_basefee: latest
                 .next_block_base_fee(chain_spec.base_fee_params(latest.timestamp + 12))
@@ -194,6 +194,12 @@ pub async fn maintain_transaction_pool<Client, P, St, Tasks>(
                     pool.delete_blobs(blobs);
                 }
             }
+            // also do periodic cleanup of the blob store
+            let pool = pool.clone();
+            task_spawner.spawn_blocking(Box::pin(async move {
+                debug!(target: "txpool", finalized_block = %finalized, "cleaning up blob store");
+                pool.cleanup_blobs();
+            }));
         }
 
         // outcomes of the futures we are waiting on
@@ -227,7 +233,7 @@ pub async fn maintain_transaction_pool<Client, P, St, Tasks>(
             Some(Ok(Err(res))) => {
                 // Failed to load accounts from state
                 let (accs, err) = *res;
-                debug!(target: "txpool", ?err, "failed to load accounts");
+                debug!(target: "txpool", %err, "failed to load accounts");
                 dirty_addresses.extend(accs);
             }
             Some(Err(_)) => {
@@ -275,7 +281,7 @@ pub async fn maintain_transaction_pool<Client, P, St, Tasks>(
 
                 // for these we need to fetch the nonce+balance from the db at the new tip
                 let mut changed_accounts =
-                    match load_accounts(client.clone(), new_tip.hash, missing_changed_acc) {
+                    match load_accounts(client.clone(), new_tip.hash(), missing_changed_acc) {
                         Ok(LoadedAccounts { accounts, failed_to_load }) => {
                             // extend accounts we failed to load from database
                             dirty_addresses.extend(failed_to_load);
@@ -286,9 +292,9 @@ pub async fn maintain_transaction_pool<Client, P, St, Tasks>(
                             let (addresses, err) = *err;
                             debug!(
                                 target: "txpool",
-                                ?err,
+                                %err,
                                 "failed to load missing changed accounts at new tip: {:?}",
-                                new_tip.hash
+                                new_tip.hash()
                             );
                             dirty_addresses.extend(addresses);
                             vec![]
@@ -341,7 +347,7 @@ pub async fn maintain_transaction_pool<Client, P, St, Tasks>(
                     pending_block_blob_fee,
                     changed_accounts,
                     // all transactions mined in the new chain need to be removed from the pool
-                    mined_transactions: new_mined_transactions.into_iter().collect(),
+                    mined_transactions: new_blocks.transaction_hashes().collect(),
                 };
                 pool.on_canonical_state_change(update);
 
@@ -384,7 +390,7 @@ pub async fn maintain_transaction_pool<Client, P, St, Tasks>(
                     maintained_state = MaintainedPoolState::Drifted;
                     debug!(target: "txpool", ?depth, "skipping deep canonical update");
                     let info = BlockInfo {
-                        last_seen_block_hash: tip.hash,
+                        last_seen_block_hash: tip.hash(),
                         last_seen_block_number: tip.number,
                         pending_basefee: pending_block_base_fee,
                         pending_blob_fee: pending_block_blob_fee,
@@ -436,7 +442,7 @@ struct FinalizedBlockTracker {
 }
 
 impl FinalizedBlockTracker {
-    fn new(last_finalized_block: Option<BlockNumber>) -> Self {
+    const fn new(last_finalized_block: Option<BlockNumber>) -> Self {
         Self { last_finalized_block }
     }
 
@@ -473,7 +479,7 @@ enum MaintainedPoolState {
 impl MaintainedPoolState {
     /// Returns `true` if the pool is assumed to be out of sync with the current state.
     #[inline]
-    fn is_drifted(&self) -> bool {
+    const fn is_drifted(&self) -> bool {
         matches!(self, MaintainedPoolState::Drifted)
     }
 }
@@ -579,7 +585,7 @@ where
         .into_iter()
         .filter_map(|tx| tx.try_ecrecovered().map(<P::Transaction>::from_recovered_transaction))
         .collect::<Vec<_>>();
-    let outcome = pool.add_transactions(crate::TransactionOrigin::Local, pool_transactions).await?;
+    let outcome = pool.add_transactions(crate::TransactionOrigin::Local, pool_transactions).await;
 
     info!(target: "txpool", txs_file =?file_path, num_txs=%outcome.len(), "Successfully reinserted local transactions from file");
     reth_primitives::fs::remove_file(file_path)?;
@@ -665,9 +671,7 @@ mod tests {
         blobstore::InMemoryBlobStore, validate::EthTransactionValidatorBuilder,
         CoinbaseTipOrdering, EthPooledTransaction, Pool, PoolTransaction, TransactionOrigin,
     };
-    use reth_primitives::{
-        fs, hex, FromRecoveredPooledTransaction, PooledTransactionsElement, MAINNET, U256,
-    };
+    use reth_primitives::{fs, hex, PooledTransactionsElement, MAINNET, U256};
     use reth_provider::test_utils::{ExtendedAccount, MockEthProvider};
     use reth_tasks::TaskManager;
 
@@ -687,7 +691,7 @@ mod tests {
         let temp_dir = tempfile::tempdir().unwrap();
         let transactions_path = temp_dir.path().join(FILENAME).with_extension(EXTENSION);
         let tx_bytes = hex!("02f87201830655c2808505ef61f08482565f94388c818ca8b9251b393131c08a736a67ccb192978801049e39c4b5b1f580c001a01764ace353514e8abdfb92446de356b260e3c1225b73fc4c8876a6258d12a129a04f02294aa61ca7676061cd99f29275491218b4754b46a0248e5e42bc5091f507");
-        let tx = PooledTransactionsElement::decode_enveloped(tx_bytes.into()).unwrap();
+        let tx = PooledTransactionsElement::decode_enveloped(&mut &tx_bytes[..]).unwrap();
         let provider = MockEthProvider::default();
         let transaction = EthPooledTransaction::from_recovered_pooled_transaction(
             tx.try_into_ecrecovered().unwrap(),

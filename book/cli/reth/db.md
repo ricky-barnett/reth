@@ -7,16 +7,16 @@ $ reth db --help
 Usage: reth db [OPTIONS] <COMMAND>
 
 Commands:
-  stats     Lists all the tables, their entry count and their size
-  list      Lists the contents of a table
-  diff      Create a diff between two database tables or two entire databases
-  get       Gets the content of a table for the given key
-  drop      Deletes all database entries
-  clear     Deletes all table entries
-  snapshot  Snapshots tables from database
-  version   Lists current and local database versions
-  path      Returns the full database path
-  help      Print this message or the help of the given subcommand(s)
+  stats                Lists all the tables, their entry count and their size
+  list                 Lists the contents of a table
+  diff                 Create a diff between two database tables or two entire databases
+  get                  Gets the content of a table for the given key
+  drop                 Deletes all database entries
+  clear                Deletes all table entries
+  create-static-files  Creates static files from database tables
+  version              Lists current and local database versions
+  path                 Returns the full database path
+  help                 Print this message or the help of the given subcommand(s)
 
 Options:
       --datadir <DATA_DIR>
@@ -81,7 +81,7 @@ Logging:
       --log.stdout.filter <FILTER>
           The filter to use for logs written to stdout
           
-          [default: info]
+          [default: ]
 
       --log.file.format <FORMAT>
           The format to use for logs written to the log file

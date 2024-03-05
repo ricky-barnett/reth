@@ -1,8 +1,11 @@
 //! Command that initializes the node by importing a chain from a file.
 
 use crate::{
-    commands::node::events::{handle_events, NodeEvent},
-    init::init_genesis,
+    args::{
+        utils::{chain_help, genesis_value_parser, SUPPORTED_CHAINS},
+        DatabaseArgs,
+    },
+    dirs::{DataDirPath, MaybePlatformPath},
     version::SHORT_VERSION,
 };
 use clap::Parser;
@@ -16,23 +19,18 @@ use reth_downloaders::{
     headers::reverse_headers::ReverseHeadersDownloaderBuilder,
 };
 use reth_interfaces::consensus::Consensus;
-use reth_primitives::{stage::StageId, ChainSpec, B256};
+use reth_node_core::{events::node::NodeEvent, init::init_genesis};
+use reth_node_ethereum::EthEvmConfig;
+use reth_primitives::{stage::StageId, ChainSpec, PruneModes, B256};
 use reth_provider::{HeaderSyncMode, ProviderFactory, StageCheckpointReader};
 use reth_stages::{
     prelude::*,
-    stages::{ExecutionStage, ExecutionStageThresholds, SenderRecoveryStage, TotalDifficultyStage},
+    stages::{ExecutionStage, ExecutionStageThresholds, SenderRecoveryStage},
 };
+use reth_static_file::StaticFileProducer;
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::watch;
 use tracing::{debug, info};
-
-use crate::{
-    args::{
-        utils::{chain_help, genesis_value_parser, SUPPORTED_CHAINS},
-        DatabaseArgs,
-    },
-    dirs::{DataDirPath, MaybePlatformPath},
-};
 
 /// Syncs RLP encoded blocks from a file.
 #[derive(Debug, Parser)]
@@ -63,7 +61,7 @@ pub struct ImportCommand {
     )]
     chain: Arc<ChainSpec>,
 
-    #[clap(flatten)]
+    #[command(flatten)]
     db: DatabaseArgs,
 
     /// The path to a block file for import.
@@ -92,11 +90,12 @@ impl ImportCommand {
         let db =
             Arc::new(init_db(db_path, DatabaseArguments::default().log_level(self.db.log_level))?);
         info!(target: "reth::cli", "Database opened");
-        let provider_factory = ProviderFactory::new(db.clone(), self.chain.clone());
+        let provider_factory =
+            ProviderFactory::new(db.clone(), self.chain.clone(), data_dir.static_files_path())?;
 
         debug!(target: "reth::cli", chain=%self.chain.chain, genesis=?self.chain.genesis_hash(), "Initializing genesis");
 
-        init_genesis(db.clone(), self.chain.clone())?;
+        init_genesis(provider_factory.clone())?;
 
         let consensus = Arc::new(BeaconConsensus::new(self.chain.clone()));
         info!(target: "reth::cli", "Consensus engine initialized");
@@ -109,8 +108,20 @@ impl ImportCommand {
         let tip = file_client.tip().expect("file client has no tip");
         info!(target: "reth::cli", "Chain file imported");
 
+        let static_file_producer = StaticFileProducer::new(
+            provider_factory.clone(),
+            provider_factory.static_file_provider(),
+            PruneModes::default(),
+        );
+
         let (mut pipeline, events) = self
-            .build_import_pipeline(config, provider_factory.clone(), &consensus, file_client)
+            .build_import_pipeline(
+                config,
+                provider_factory.clone(),
+                &consensus,
+                file_client,
+                static_file_producer,
+            )
             .await?;
 
         // override the tip
@@ -121,7 +132,12 @@ impl ImportCommand {
 
         let latest_block_number =
             provider.get_stage_checkpoint(StageId::Finish)?.map(|ch| ch.block_number);
-        tokio::spawn(handle_events(None, latest_block_number, events, db.clone()));
+        tokio::spawn(reth_node_core::events::node::handle_events(
+            None,
+            latest_block_number,
+            events,
+            db.clone(),
+        ));
 
         // Run pipeline
         info!(target: "reth::cli", "Starting sync pipeline");
@@ -140,6 +156,7 @@ impl ImportCommand {
         provider_factory: ProviderFactory<DB>,
         consensus: &Arc<C>,
         file_client: Arc<FileClient>,
+        static_file_producer: StaticFileProducer<DB>,
     ) -> eyre::Result<(Pipeline<DB>, impl Stream<Item = NodeEvent>)>
     where
         DB: Database + Clone + Unpin + 'static,
@@ -158,7 +175,8 @@ impl ImportCommand {
             .into_task();
 
         let (tip_tx, tip_rx) = watch::channel(B256::ZERO);
-        let factory = reth_revm::EvmProcessorFactory::new(self.chain.clone());
+        let factory =
+            reth_revm::EvmProcessorFactory::new(self.chain.clone(), EthEvmConfig::default());
 
         let max_block = file_client.max_block().unwrap_or(0);
         let mut pipeline = Pipeline::builder()
@@ -173,10 +191,6 @@ impl ImportCommand {
                     header_downloader,
                     body_downloader,
                     factory.clone(),
-                )
-                .set(
-                    TotalDifficultyStage::new(consensus.clone())
-                        .with_commit_threshold(config.stages.total_difficulty.commit_threshold),
                 )
                 .set(SenderRecoveryStage {
                     commit_threshold: config.stages.sender_recovery.commit_threshold,
@@ -198,7 +212,7 @@ impl ImportCommand {
                     config.prune.map(|prune| prune.segments).unwrap_or_default(),
                 )),
             )
-            .build(provider_factory);
+            .build(provider_factory, static_file_producer);
 
         let events = pipeline.events().map(Into::into);
 

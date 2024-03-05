@@ -1,9 +1,21 @@
 use crate::EthPayloadBuilderAttributes;
 use alloy_rlp::{Encodable, Error as DecodeError};
-use reth_node_api::PayloadBuilderAttributes;
-use reth_primitives::{Address, TransactionSigned, Withdrawal, B256};
-use reth_rpc_types::engine::{OptimismPayloadAttributes, PayloadId};
-use reth_rpc_types_compat::engine::payload::convert_standalone_withdraw_to_withdrawal;
+use reth_node_api::{BuiltPayload, PayloadBuilderAttributes};
+use reth_primitives::{
+    revm::config::revm_spec_by_timestamp_after_merge,
+    revm_primitives::{BlobExcessGasAndPrice, BlockEnv, CfgEnv, CfgEnvWithHandlerCfg, SpecId},
+    Address, BlobTransactionSidecar, ChainSpec, Header, SealedBlock, TransactionSigned,
+    Withdrawals, B256, U256,
+};
+use reth_rpc_types::engine::{
+    ExecutionPayloadEnvelopeV2, ExecutionPayloadV1, OptimismExecutionPayloadEnvelopeV3,
+    OptimismPayloadAttributes, PayloadId,
+};
+use reth_rpc_types_compat::engine::payload::{
+    block_to_payload_v3, convert_block_to_payload_field_v2,
+    convert_standalone_withdraw_to_withdrawal, try_block_to_payload_v1,
+};
+use std::sync::Arc;
 
 /// Optimism Payload Builder Attributes
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,14 +49,11 @@ impl PayloadBuilderAttributes for OptimismPayloadBuilderAttributes {
             (payload_id_optimism(&parent, &attributes, &transactions), transactions)
         };
 
-        let withdraw = attributes.payload_attributes.withdrawals.map(
-            |withdrawals: Vec<reth_rpc_types::withdrawal::Withdrawal>| {
-                withdrawals
-                    .into_iter()
-                    .map(convert_standalone_withdraw_to_withdrawal) // Removed the parentheses here
-                    .collect::<Vec<_>>()
-            },
-        );
+        let withdraw = attributes.payload_attributes.withdrawals.map(|withdrawals| {
+            Withdrawals::new(
+                withdrawals.into_iter().map(convert_standalone_withdraw_to_withdrawal).collect(),
+            )
+        });
 
         let payload_attributes = EthPayloadBuilderAttributes {
             id,
@@ -88,8 +97,186 @@ impl PayloadBuilderAttributes for OptimismPayloadBuilderAttributes {
         self.payload_attributes.prev_randao
     }
 
-    fn withdrawals(&self) -> &Vec<Withdrawal> {
+    fn withdrawals(&self) -> &Withdrawals {
         &self.payload_attributes.withdrawals
+    }
+
+    fn cfg_and_block_env(
+        &self,
+        chain_spec: &ChainSpec,
+        parent: &Header,
+    ) -> (CfgEnvWithHandlerCfg, BlockEnv) {
+        // configure evm env based on parent block
+        let mut cfg = CfgEnv::default();
+        cfg.chain_id = chain_spec.chain().id();
+
+        // ensure we're not missing any timestamp based hardforks
+        let spec_id = revm_spec_by_timestamp_after_merge(chain_spec, self.timestamp());
+
+        // if the parent block did not have excess blob gas (i.e. it was pre-cancun), but it is
+        // cancun now, we need to set the excess blob gas to the default value
+        let blob_excess_gas_and_price = parent
+            .next_block_excess_blob_gas()
+            .or_else(|| {
+                if spec_id.is_enabled_in(SpecId::CANCUN) {
+                    // default excess blob gas is zero
+                    Some(0)
+                } else {
+                    None
+                }
+            })
+            .map(BlobExcessGasAndPrice::new);
+
+        let block_env = BlockEnv {
+            number: U256::from(parent.number + 1),
+            coinbase: self.suggested_fee_recipient(),
+            timestamp: U256::from(self.timestamp()),
+            difficulty: U256::ZERO,
+            prevrandao: Some(self.prev_randao()),
+            gas_limit: U256::from(parent.gas_limit),
+            // calculate basefee based on parent block's gas usage
+            basefee: U256::from(
+                parent
+                    .next_block_base_fee(chain_spec.base_fee_params(self.timestamp()))
+                    .unwrap_or_default(),
+            ),
+            // calculate excess gas based on parent block's blob gas usage
+            blob_excess_gas_and_price,
+        };
+
+        let cfg_with_handler_cfg;
+        {
+            cfg_with_handler_cfg = CfgEnvWithHandlerCfg {
+                cfg_env: cfg,
+                handler_cfg: revm_primitives::HandlerCfg {
+                    spec_id,
+                    #[cfg(feature = "optimism")]
+                    is_optimism: chain_spec.is_optimism(),
+                },
+            };
+        }
+
+        (cfg_with_handler_cfg, block_env)
+    }
+}
+
+/// Contains the built payload.
+#[derive(Debug, Clone)]
+pub struct OptimismBuiltPayload {
+    /// Identifier of the payload
+    pub(crate) id: PayloadId,
+    /// The built block
+    pub(crate) block: SealedBlock,
+    /// The fees of the block
+    pub(crate) fees: U256,
+    /// The blobs, proofs, and commitments in the block. If the block is pre-cancun, this will be
+    /// empty.
+    pub(crate) sidecars: Vec<BlobTransactionSidecar>,
+    /// The rollup's chainspec.
+    pub(crate) chain_spec: Arc<ChainSpec>,
+    /// The payload attributes.
+    pub(crate) attributes: OptimismPayloadBuilderAttributes,
+}
+
+// === impl BuiltPayload ===
+
+impl OptimismBuiltPayload {
+    /// Initializes the payload with the given initial block.
+    pub fn new(
+        id: PayloadId,
+        block: SealedBlock,
+        fees: U256,
+        chain_spec: Arc<ChainSpec>,
+        attributes: OptimismPayloadBuilderAttributes,
+    ) -> Self {
+        Self { id, block, fees, sidecars: Vec::new(), chain_spec, attributes }
+    }
+
+    /// Returns the identifier of the payload.
+    pub fn id(&self) -> PayloadId {
+        self.id
+    }
+
+    /// Returns the built block(sealed)
+    pub fn block(&self) -> &SealedBlock {
+        &self.block
+    }
+
+    /// Fees of the block
+    pub fn fees(&self) -> U256 {
+        self.fees
+    }
+
+    /// Adds sidecars to the payload.
+    pub fn extend_sidecars(&mut self, sidecars: Vec<BlobTransactionSidecar>) {
+        self.sidecars.extend(sidecars)
+    }
+}
+
+impl BuiltPayload for OptimismBuiltPayload {
+    fn block(&self) -> &SealedBlock {
+        &self.block
+    }
+
+    fn fees(&self) -> U256 {
+        self.fees
+    }
+}
+
+impl<'a> BuiltPayload for &'a OptimismBuiltPayload {
+    fn block(&self) -> &SealedBlock {
+        (**self).block()
+    }
+
+    fn fees(&self) -> U256 {
+        (**self).fees()
+    }
+}
+
+// V1 engine_getPayloadV1 response
+impl From<OptimismBuiltPayload> for ExecutionPayloadV1 {
+    fn from(value: OptimismBuiltPayload) -> Self {
+        try_block_to_payload_v1(value.block)
+    }
+}
+
+// V2 engine_getPayloadV2 response
+impl From<OptimismBuiltPayload> for ExecutionPayloadEnvelopeV2 {
+    fn from(value: OptimismBuiltPayload) -> Self {
+        let OptimismBuiltPayload { block, fees, .. } = value;
+
+        ExecutionPayloadEnvelopeV2 {
+            block_value: fees,
+            execution_payload: convert_block_to_payload_field_v2(block),
+        }
+    }
+}
+
+impl From<OptimismBuiltPayload> for OptimismExecutionPayloadEnvelopeV3 {
+    fn from(value: OptimismBuiltPayload) -> Self {
+        let OptimismBuiltPayload { block, fees, sidecars, chain_spec, attributes, .. } = value;
+
+        let parent_beacon_block_root =
+            if chain_spec.is_cancun_active_at_timestamp(attributes.timestamp()) {
+                attributes.parent_beacon_block_root().unwrap_or(B256::ZERO)
+            } else {
+                B256::ZERO
+            };
+        OptimismExecutionPayloadEnvelopeV3 {
+            execution_payload: block_to_payload_v3(block.clone()),
+            block_value: fees,
+            // From the engine API spec:
+            //
+            // > Client software **MAY** use any heuristics to decide whether to set
+            // `shouldOverrideBuilder` flag or not. If client software does not implement any
+            // heuristic this flag **SHOULD** be set to `false`.
+            //
+            // Spec:
+            // <https://github.com/ethereum/execution-apis/blob/fe8e13c288c592ec154ce25c534e26cb7ce0530d/src/engine/cancun.md#specification-2>
+            should_override_builder: false,
+            blobs_bundle: sidecars.into_iter().map(Into::into).collect::<Vec<_>>().into(),
+            parent_beacon_block_root,
+        }
     }
 }
 

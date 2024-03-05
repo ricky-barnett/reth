@@ -23,12 +23,12 @@ pub fn db(c: &mut Criterion) {
     group.warm_up_time(std::time::Duration::from_millis(200));
 
     measure_table_db::<CanonicalHeaders>(&mut group);
-    measure_table_db::<HeaderTD>(&mut group);
+    measure_table_db::<HeaderTerminalDifficulties>(&mut group);
     measure_table_db::<HeaderNumbers>(&mut group);
     measure_table_db::<Headers>(&mut group);
     measure_table_db::<BlockBodyIndices>(&mut group);
     measure_table_db::<BlockOmmers>(&mut group);
-    measure_table_db::<TxHashNumber>(&mut group);
+    measure_table_db::<TransactionHashNumbers>(&mut group);
     measure_table_db::<Transactions>(&mut group);
     measure_dupsort_db::<PlainStorageState>(&mut group);
     measure_table_db::<PlainAccountState>(&mut group);
@@ -40,12 +40,12 @@ pub fn serialization(c: &mut Criterion) {
     group.warm_up_time(std::time::Duration::from_millis(200));
 
     measure_table_serialization::<CanonicalHeaders>(&mut group);
-    measure_table_serialization::<HeaderTD>(&mut group);
+    measure_table_serialization::<HeaderTerminalDifficulties>(&mut group);
     measure_table_serialization::<HeaderNumbers>(&mut group);
     measure_table_serialization::<Headers>(&mut group);
     measure_table_serialization::<BlockBodyIndices>(&mut group);
     measure_table_serialization::<BlockOmmers>(&mut group);
-    measure_table_serialization::<TxHashNumber>(&mut group);
+    measure_table_serialization::<TransactionHashNumbers>(&mut group);
     measure_table_serialization::<Transactions>(&mut group);
     measure_table_serialization::<PlainStorageState>(&mut group);
     measure_table_serialization::<PlainAccountState>(&mut group);
@@ -54,7 +54,7 @@ pub fn serialization(c: &mut Criterion) {
 /// Measures `Encode`, `Decode`, `Compress` and `Decompress`.
 fn measure_table_serialization<T>(group: &mut BenchmarkGroup<'_, WallTime>)
 where
-    T: Table + Default,
+    T: Table,
     T::Key: Default + Clone + for<'de> serde::Deserialize<'de>,
     T::Value: Default + Clone + for<'de> serde::Deserialize<'de>,
 {
@@ -119,7 +119,7 @@ where
 /// Measures `SeqWrite`, `RandomWrite`, `SeqRead` and `RandomRead` using `cursor` and `tx.put`.
 fn measure_table_db<T>(group: &mut BenchmarkGroup<'_, WallTime>)
 where
-    T: Table + Default,
+    T: Table,
     T::Key: Default + Clone + for<'de> serde::Deserialize<'de>,
     T::Value: Default + Clone + for<'de> serde::Deserialize<'de>,
 {
@@ -215,7 +215,7 @@ where
 /// Measures `SeqWrite`, `RandomWrite` and `SeqRead`  using `cursor_dup` and `tx.put`.
 fn measure_dupsort_db<T>(group: &mut BenchmarkGroup<'_, WallTime>)
 where
-    T: Table + Default + DupSort,
+    T: Table + DupSort,
     T::Key: Default + Clone + for<'de> serde::Deserialize<'de>,
     T::Value: Default + Clone + for<'de> serde::Deserialize<'de>,
     T::SubKey: Default + Clone + for<'de> serde::Deserialize<'de>,

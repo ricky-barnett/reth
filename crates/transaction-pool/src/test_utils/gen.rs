@@ -2,11 +2,12 @@ use crate::EthPooledTransaction;
 use rand::Rng;
 use reth_primitives::{
     constants::MIN_PROTOCOL_BASE_FEE, sign_message, AccessList, Address, Bytes,
-    FromRecoveredTransaction, Transaction, TransactionKind, TransactionSigned, TxEip1559, TxLegacy,
-    TxValue, B256, MAINNET,
+    FromRecoveredTransaction, Transaction, TransactionKind, TransactionSigned, TxEip1559,
+    TxEip4844, TxLegacy, B256, MAINNET, U256,
 };
 
 /// A generator for transactions for testing purposes.
+#[derive(Debug)]
 pub struct TransactionGenerator<R> {
     /// The random number generator used for generating keys and selecting signers.
     pub rng: R,
@@ -47,7 +48,7 @@ impl<R: Rng> TransactionGenerator<R> {
     }
 
     /// Sets the default gas limit for all generated transactions
-    pub fn with_gas_limit(mut self, gas_limit: u64) -> Self {
+    pub const fn with_gas_limit(mut self, gas_limit: u64) -> Self {
         self.gas_limit = gas_limit;
         self
     }
@@ -59,7 +60,7 @@ impl<R: Rng> TransactionGenerator<R> {
     }
 
     /// Sets the base fee for the generated transactions
-    pub fn with_base_fee(mut self, base_fee: u64) -> Self {
+    pub const fn with_base_fee(mut self, base_fee: u64) -> Self {
         self.base_fee = base_fee as u128;
         self
     }
@@ -90,15 +91,27 @@ impl<R: Rng> TransactionGenerator<R> {
         self.transaction().into_eip1559()
     }
 
+    /// Creates a new transaction with a random signer
+    pub fn gen_eip4844(&mut self) -> TransactionSigned {
+        self.transaction().into_eip4844()
+    }
+
     /// Generates and returns a pooled EIP-1559 transaction with a random signer.
     pub fn gen_eip1559_pooled(&mut self) -> EthPooledTransaction {
         EthPooledTransaction::from_recovered_transaction(
             self.gen_eip1559().into_ecrecovered().unwrap(),
         )
     }
+    /// Generates and returns a pooled EIP-4844 transaction with a random signer.
+    pub fn gen_eip4844_pooled(&mut self) -> EthPooledTransaction {
+        EthPooledTransaction::from_recovered_transaction(
+            self.gen_eip4844().into_ecrecovered().unwrap(),
+        )
+    }
 }
 
 /// A Builder type to configure and create a transaction.
+#[derive(Debug)]
 pub struct TransactionBuilder {
     /// The signer used to sign the transaction.
     pub signer: B256,
@@ -116,7 +129,7 @@ pub struct TransactionBuilder {
     /// The recipient or contract address of the transaction.
     pub to: TransactionKind,
     /// The value to be transferred in the transaction.
-    pub value: TxValue,
+    pub value: U256,
     /// The list of addresses and storage keys that the transaction can access.
     pub access_list: AccessList,
     /// The input data for the transaction, typically containing function parameters for contract
@@ -160,6 +173,26 @@ impl TransactionBuilder {
             self.signer,
         )
     }
+    /// Converts the transaction builder into a transaction format using EIP-4844.
+    pub fn into_eip4844(self) -> TransactionSigned {
+        TransactionBuilder::signed(
+            TxEip4844 {
+                chain_id: self.chain_id,
+                nonce: self.nonce,
+                gas_limit: self.gas_limit,
+                max_fee_per_gas: self.max_fee_per_gas,
+                max_priority_fee_per_gas: self.max_priority_fee_per_gas,
+                to: self.to,
+                value: self.value,
+                access_list: self.access_list,
+                input: self.input,
+                blob_versioned_hashes: Default::default(),
+                max_fee_per_blob_gas: Default::default(),
+            }
+            .into(),
+            self.signer,
+        )
+    }
 
     /// Signs the provided transaction using the specified signer and returns a signed transaction.
     fn signed(transaction: Transaction, signer: B256) -> TransactionSigned {
@@ -168,19 +201,19 @@ impl TransactionBuilder {
     }
 
     /// Sets the signer for the transaction builder.
-    pub fn signer(mut self, signer: B256) -> Self {
+    pub const fn signer(mut self, signer: B256) -> Self {
         self.signer = signer;
         self
     }
 
     /// Sets the gas limit for the transaction builder.
-    pub fn gas_limit(mut self, gas_limit: u64) -> Self {
+    pub const fn gas_limit(mut self, gas_limit: u64) -> Self {
         self.gas_limit = gas_limit;
         self
     }
 
     /// Sets the nonce for the transaction builder.
-    pub fn nonce(mut self, nonce: u64) -> Self {
+    pub const fn nonce(mut self, nonce: u64) -> Self {
         self.nonce = nonce;
         self
     }
@@ -198,26 +231,26 @@ impl TransactionBuilder {
     }
 
     /// Sets the maximum fee per gas for the transaction builder.
-    pub fn max_fee_per_gas(mut self, max_fee_per_gas: u128) -> Self {
+    pub const fn max_fee_per_gas(mut self, max_fee_per_gas: u128) -> Self {
         self.max_fee_per_gas = max_fee_per_gas;
         self
     }
 
     /// Sets the maximum priority fee per gas for the transaction builder.
-    pub fn max_priority_fee_per_gas(mut self, max_priority_fee_per_gas: u128) -> Self {
+    pub const fn max_priority_fee_per_gas(mut self, max_priority_fee_per_gas: u128) -> Self {
         self.max_priority_fee_per_gas = max_priority_fee_per_gas;
         self
     }
 
     /// Sets the recipient or contract address for the transaction builder.
-    pub fn to(mut self, to: Address) -> Self {
+    pub const fn to(mut self, to: Address) -> Self {
         self.to = TransactionKind::Call(to);
         self
     }
 
     /// Sets the value to be transferred in the transaction.
     pub fn value(mut self, value: u128) -> Self {
-        self.value = value.into();
+        self.value = U256::from(value);
         self
     }
 
@@ -234,7 +267,7 @@ impl TransactionBuilder {
     }
 
     /// Sets the chain ID for the transaction.
-    pub fn chain_id(mut self, chain_id: u64) -> Self {
+    pub const fn chain_id(mut self, chain_id: u64) -> Self {
         self.chain_id = chain_id;
         self
     }
@@ -277,7 +310,7 @@ impl TransactionBuilder {
 
     /// Sets the value to be transferred in the transaction, mutable reference version.
     pub fn set_value(&mut self, value: u128) -> &mut Self {
-        self.value = value.into();
+        self.value = U256::from(value);
         self
     }
 

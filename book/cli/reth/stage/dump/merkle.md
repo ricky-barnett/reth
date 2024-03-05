@@ -4,11 +4,11 @@ Merkle stage
 
 ```bash
 $ reth stage dump merkle --help
-Usage: reth stage dump merkle [OPTIONS] --output-db <OUTPUT_PATH> --from <FROM> --to <TO>
+Usage: reth stage dump merkle [OPTIONS] --output-datadir <OUTPUT_PATH> --from <FROM> --to <TO>
 
 Options:
-      --output-db <OUTPUT_PATH>
-          The path to the new database folder.
+      --output-datadir <OUTPUT_PATH>
+          The path to the new datadir folder.
 
   -f, --from <FROM>
           From which block
@@ -47,7 +47,7 @@ Logging:
       --log.stdout.filter <FILTER>
           The filter to use for logs written to stdout
           
-          [default: info]
+          [default: ]
 
       --log.file.format <FORMAT>
           The format to use for logs written to the log file

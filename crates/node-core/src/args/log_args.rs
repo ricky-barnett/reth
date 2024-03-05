@@ -20,12 +20,7 @@ pub struct LogArgs {
     pub log_stdout_format: LogFormat,
 
     /// The filter to use for logs written to stdout.
-    #[arg(
-        long = "log.stdout.filter",
-        value_name = "FILTER",
-        global = true,
-        default_value = "info"
-    )]
+    #[arg(long = "log.stdout.filter", value_name = "FILTER", global = true, default_value = "")]
     pub log_stdout_filter: String,
 
     /// The format to use for logs written to the log file.
@@ -72,7 +67,7 @@ pub struct LogArgs {
     )]
     pub color: ColorMode,
     /// The verbosity settings for the tracer.
-    #[clap(flatten)]
+    #[command(flatten)]
     pub verbosity: Verbosity,
 }
 
@@ -81,8 +76,8 @@ impl LogArgs {
     fn layer(&self, format: LogFormat, filter: String, use_color: bool) -> LayerInfo {
         LayerInfo::new(
             format,
+            self.verbosity.directive().to_string(),
             filter,
-            self.verbosity.directive(),
             if use_color { Some(self.color.to_string()) } else { None },
         )
     }
@@ -150,11 +145,11 @@ pub struct Verbosity {
     /// -vvv    Info
     /// -vvvv   Debug
     /// -vvvvv  Traces (warning: very verbose!)
-    #[clap(short, long, action = ArgAction::Count, global = true, default_value_t = 3, verbatim_doc_comment, help_heading = "Display")]
+    #[arg(short, long, action = ArgAction::Count, global = true, default_value_t = 3, verbatim_doc_comment, help_heading = "Display")]
     verbosity: u8,
 
     /// Silence all log output.
-    #[clap(long, alias = "silent", short = 'q', global = true, help_heading = "Display")]
+    #[arg(long, alias = "silent", short = 'q', global = true, help_heading = "Display")]
     quiet: bool,
 }
 
