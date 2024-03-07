@@ -2,37 +2,39 @@ version: "3.9"
 name: "reth"
 
 services:
-    op-reth:
-        restart: unless-stopped
-        image: rickybarnett/op-reth
-        ports:
-            - "9002:9002" # metrics
-            - "30304:30304" # eth/66 peering
-            - "7545:7545" # rpc
-            - "7546:7546" # ws
-            - "9551:9551" # engine
+    base-geth:
+        image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth
         volumes:
-            - ~/rethdata_base:/root/.local/share/reth/base/db
-            - ~/rethlogs:/root/rethlogs
+            - ~/base:/base
             - ./jwttoken:/root/jwt:ro
-        # For Sepolia, replace `--chain mainnet` with `--chain sepolia`
+        ports:
+            - "9545:9545"
+            - "9546:9546"
         command: >
-            node
-            --chain base
-            --rollup.sequencer-http https://mainnet-sequencer.base.org
-            --authrpc.addr 0.0.0.0
-            --authrpc.port 9551
-            --authrpc.jwtsecret /root/jwt/jwt.hex
-            --http --http.addr 0.0.0.0 --http.port 7545
-            --http.corsdomain "*"
-            --http.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
-            --ws --ws.addr 0.0.0.0 --ws.port 7546
-            --ws.origins "*"
-            --ws.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
-            --rpc-max-response-size 9999999
-        depends_on:
-            - reth
-
+            --datadir=/base/base-geth-data
+            --http
+            --http.corsdomain="*"
+            --http.vhosts="*"
+            --http.addr=0.0.0.0
+            --http.port=9545
+            --http.api=web3,debug,eth,txpool,net,engine
+            --ws
+            --ws.addr=0.0.0.0
+            --ws.port=9546
+            --ws.origins="*"
+            --ws.api=debug,eth,txpool,net,engine
+            --authrpc.addr="0.0.0.0"
+            --authrpc.port="9551"
+            --authrpc.vhosts="*"
+            --authrpc.jwtsecret=/root/jwt/jwt.hex
+            --syncmode=snap
+            --gcmode=archive
+            --nodiscover
+            --maxpeers=0
+            --rollup.disabletxpoolgossip=true
+            --rollup.sequencerhttp=https://mainnet-sequencer.base.org
+            --rollup.halt=major
+            --op-network=base-mainnet
     op-node:
         image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node
         restart: unless-stopped
@@ -46,7 +48,7 @@ services:
             op-node
               --l1=ws://reth:8546
               --l1.trustrpc
-              --l2=ws://op-reth:9551
+              --l2=ws://base-geth:9551
               --l2.jwt-secret=/root/jwt/jwt.hex
               --rollup.config=/root/rollup/rollup.json
               --rpc.addr=0.0.0.0
@@ -55,9 +57,9 @@ services:
               --l1.beacon=http://lighthouse:5052
         depends_on:
             - reth
-            - op-reth
+            - base-geth
             - lighthouse
 
 volumes:
-    rethdata_base:
+    base:
         driver: local
