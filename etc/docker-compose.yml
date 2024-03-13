@@ -4,7 +4,7 @@ name: 'reth'
 services:
   reth:
     restart: unless-stopped
-    image: ghcr.io/paradigmxyz/reth:latest
+    image: ghcr.io/paradigmxyz/reth:v0.1.0-alpha.22
     ports:
       - '9001:9001' # metrics
       - '30303:30303' # eth/66 peering
