@@ -10,6 +10,7 @@ services:
         ports:
             - "9545:9545"
             - "9546:9546"
+            - "30304:30304"
         command: >
             --datadir=/base
             --http
@@ -34,6 +35,8 @@ services:
             --rollup.sequencerhttp=https://mainnet-sequencer.base.org
             --rollup.halt=major
             --op-network=base-mainnet
+            --discovery.port=30304
+            --port=30304
     op-node:
         image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node
         restart: unless-stopped
