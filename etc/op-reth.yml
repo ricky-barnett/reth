@@ -10,6 +10,7 @@ services:
         ports:
             - "9545:9545"
             - "9546:9546"
+            - "30303:30303"
         command: >
             --datadir=/base
             --http
