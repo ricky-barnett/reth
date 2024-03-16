@@ -11,6 +11,7 @@ services:
         command: >
             -c "[ ! -d /blast/blast-geth-data/geth ] && /usr/local/bin/geth init --datadir=/blast/blast-geth-data /root/rollup/blast/genesis.json || exit 0"
     blast-geth:
+        stop_grace_period: 5m
         image: blastio/blast-geth:mainnet
         volumes:
             - ~/blast:/blast
@@ -45,6 +46,9 @@ services:
             --rollup.sequencerhttp=https://sequencer.blast.io
             --discovery.port=30304
             --port=30304
+        networks:
+            netBackEnd:
+                ipv4_address: 192.168.0.4
         depends_on:
             geth-init:
                 condition: service_completed_successfully
