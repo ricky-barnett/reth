@@ -41,7 +41,7 @@ services:
             --port=30305
         networks:
             netBackEnd:
-                ipv4_address: 172.19.0.5
+                ipv4_address: 172.18.0.5
     base-op-node:
         image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node
         restart: unless-stopped
