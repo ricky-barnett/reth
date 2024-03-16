@@ -42,7 +42,7 @@ services:
             --rpc-max-response-size 9999999
         networks:
             netBackEnd:
-                ipv4_address: 192.168.0.3
+                ipv4_address: 172.18.0.3
 
     simulator:
         restart: unless-stopped
@@ -53,7 +53,7 @@ services:
             - 8001:8080
         networks:
             netBackEnd:
-                ipv4_address: 192.168.0.2
+                ipv4_address: 172.18.0.2
 
     prometheus:
         restart: unless-stopped
