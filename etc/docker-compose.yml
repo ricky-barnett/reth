@@ -1,13 +1,6 @@
 version: "3.9"
 name: "reth"
 
-networks:
-    netBackEnd:
-        ipam:
-            driver: default
-            config:
-                - subnet: 192.168.0.0/24
-
 services:
     reth:
         restart: unless-stopped
@@ -40,9 +33,6 @@ services:
             --ws.origins "*"
             --ws.api "eth,net,web3,txpool,admin,eth-call-bundle,debug,trace"
             --rpc-max-response-size 9999999
-        networks:
-            netBackEnd:
-                ipv4_address: 192.168.0.3
 
     simulator:
         restart: unless-stopped
@@ -51,9 +41,6 @@ services:
             - reth
         ports:
             - 8001:8080
-        networks:
-            netBackEnd:
-                ipv4_address: 192.168.0.2
 
     prometheus:
         restart: unless-stopped
