@@ -3,10 +3,6 @@ name: "reth"
 
 services:
     geth-init:
-        depends_on:
-            - reth
-            - simulator
-            - lighthouse
         image: blastio/blast-geth:mainnet
         volumes:
             - ./rollup:/root/rollup:ro
@@ -50,10 +46,10 @@ services:
             --rollup.sequencerhttp=https://sequencer.blast.io
             --discovery.port=30304
             --port=30304
+        networks:
+            netBackEnd:
+                ipv4_address: 192.168.0.4
         depends_on:
-            - reth
-            - simulator
-            - lighthouse
             geth-init:
                 condition: service_completed_successfully
     blast-op-node:
@@ -77,8 +73,6 @@ services:
               --p2p.bootnodes=enr:-J64QGwHl9uYLfC_cnmxSA6wQH811nkOWJDWjzxqkEUlJoZHWvI66u-BXgVcPCeMUmg0dBpFQAPotFchG67FHJMZ9OSGAY3d6wevgmlkgnY0gmlwhANizeSHb3BzdGFja4Sx_AQAiXNlY3AyNTZrMaECg4pk0cskPAyJ7pOmo9E6RqGBwV-Lex4VS9a3MQvu7PWDdGNwgnZhg3VkcIJ2YQ,enr:-J64QDge2jYBQtcNEpRqmKfci5E5BHAhNBjgv4WSdwH1_wPqbueq2bDj38-TSW8asjy5lJj1Xftui6Or8lnaYFCqCI-GAY3d6wf3gmlkgnY0gmlwhCO2D9yHb3BzdGFja4Sx_AQAiXNlY3AyNTZrMaEDo4aCTq7pCEN8om9U5n_VyWdambGnQhwHNwKc8o-OicaDdGNwgnZhg3VkcIJ2YQ
         depends_on:
             - reth
-            - simulator
-            - lighthouse
             - blast-geth
 
 volumes:
