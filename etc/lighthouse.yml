@@ -23,7 +23,7 @@ services:
             lighthouse bn
             --network mainnet
             --http --http-address 0.0.0.0
-            --execution-endpoint http://reth:8551
+            --execution-endpoint http://192.168.0.3:8551
             --metrics --metrics-address 0.0.0.0
             --execution-jwt /root/jwt/jwt.hex
             --checkpoint-sync-url https://mainnet.checkpoint.sigp.io
