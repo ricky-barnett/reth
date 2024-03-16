@@ -3,12 +3,11 @@ name: "reth"
 
 networks:
     netBackEnd:
-        driver: bridge
         ipam:
             driver: default
             config:
                 - subnet: 172.18.0.0/24
-                  gateway: 127.18.0.1
+                - gateway: 127.18.0.1
 
 services:
     reth:
