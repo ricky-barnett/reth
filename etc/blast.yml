@@ -46,6 +46,9 @@ services:
             --rollup.sequencerhttp=https://sequencer.blast.io
             --discovery.port=30304
             --port=30304
+        networks:
+            netBackEnd:
+                ipv4_address: 192.168.0.4
         depends_on:
             geth-init:
                 condition: service_completed_successfully
