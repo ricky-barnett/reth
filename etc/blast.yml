@@ -48,7 +48,7 @@ services:
         depends_on:
             geth-init:
                 condition: service_completed_successfully
-    op-node:
+    blast-op-node:
         image: blastio/blast-optimism:mainnet
         restart: unless-stopped
         volumes:
