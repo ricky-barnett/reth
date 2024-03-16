@@ -53,7 +53,7 @@ services:
               --l1.trustrpc
               --l2=ws://base-geth:6551
               --l2.jwt-secret=/root/jwt/jwt.hex
-              --rollup.config=/root/rollup/rollup.json
+              --rollup.config=/root/rollup/base/rollup.json
               --rpc.addr=0.0.0.0
               --rpc.port=6000
               --network=base-mainnet
