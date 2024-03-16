@@ -39,9 +39,6 @@ services:
             --op-network=base-mainnet
             --discovery.port=30305
             --port=30305
-        networks:
-            netBackEnd:
-                ipv4_address: 192.168.0.5
     base-op-node:
         image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node
         restart: unless-stopped
