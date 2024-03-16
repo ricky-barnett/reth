@@ -1,0 +1,76 @@
+version: "3.9"
+name: "reth"
+
+services:
+    geth-init:
+        image: blastio/blast-geth:mainnet
+        volumes:
+            - ./rollup:/root/rollup:ro
+            - ~/blast:/blast
+        entrypoint: /bin/sh
+        command: >
+            -c "[ ! -d /blast/blast-geth-data/geth ] && /usr/local/bin/geth init --datadir=/blast/blast-geth-data /root/rollup/genesis.json || exit 0"
+    blast-geth:
+        image: blastio/blast-geth:mainnet
+        volumes:
+            - ~/blast:/blast
+            - ./jwttoken:/root/jwt:ro
+        ports:
+            - "7545:7545"
+            - "7546:7546"
+            - "30304:30304/tcp"
+            - "30304:30304/udp"
+        command: >
+            --datadir=/blast/blast-geth-data
+            --http
+            --http.corsdomain="*"
+            --http.vhosts="*"
+            --http.addr=0.0.0.0
+            --http.port=7545
+            --http.api=web3,debug,eth,txpool,net,engine
+            --ws
+            --ws.addr=0.0.0.0
+            --ws.port=7546
+            --ws.origins="*"
+            --ws.api=debug,eth,txpool,net,engine
+            --authrpc.addr="0.0.0.0"
+            --authrpc.port="7551"
+            --authrpc.vhosts="*"
+            --authrpc.jwtsecret=/root/jwt/jwt.hex
+            --syncmode=full
+            --gcmode=archive
+            --nodiscover
+            --maxpeers=0
+            --rollup.disabletxpoolgossip=true
+            --rollup.sequencerhttp=https://sequencer.blast.io
+            --discovery.port=30304
+            --port=30304
+        depends_on:
+            geth-init:
+                condition: service_completed_successfully
+    op-node:
+        image: blastio/blast-optimism:mainnet
+        restart: unless-stopped
+        volumes:
+            - ./rollup:/root/rollup:ro
+            - ./jwttoken:/root/jwt:ro
+        ports:
+            - "7000:7000" # rpc
+            - "7003:7003"
+        command: >
+            op-node
+              --l1=ws://reth:8546
+              --l1.trustrpc
+              --l2=ws://blast-geth:7551
+              --l2.jwt-secret=/root/jwt/jwt.hex
+              --rollup.config=/root/rollup/rollup.json
+              --rpc.addr=0.0.0.0
+              --rpc.port=7000
+              --p2p.bootnodes=enr:-J64QGwHl9uYLfC_cnmxSA6wQH811nkOWJDWjzxqkEUlJoZHWvI66u-BXgVcPCeMUmg0dBpFQAPotFchG67FHJMZ9OSGAY3d6wevgmlkgnY0gmlwhANizeSHb3BzdGFja4Sx_AQAiXNlY3AyNTZrMaECg4pk0cskPAyJ7pOmo9E6RqGBwV-Lex4VS9a3MQvu7PWDdGNwgnZhg3VkcIJ2YQ,enr:-J64QDge2jYBQtcNEpRqmKfci5E5BHAhNBjgv4WSdwH1_wPqbueq2bDj38-TSW8asjy5lJj1Xftui6Or8lnaYFCqCI-GAY3d6wf3gmlkgnY0gmlwhCO2D9yHb3BzdGFja4Sx_AQAiXNlY3AyNTZrMaEDo4aCTq7pCEN8om9U5n_VyWdambGnQhwHNwKc8o-OicaDdGNwgnZhg3VkcIJ2YQ
+        depends_on:
+            - reth
+            - blast-geth
+
+volumes:
+    blast:
+        driver: local
