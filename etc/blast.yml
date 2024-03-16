@@ -63,9 +63,9 @@ services:
             - "7003:7003"
         command: >
             op-node
-              --l1=ws://192.168.0.3:8546
+              --l1=ws://reth:8546
               --l1.trustrpc
-              --l2=ws://192.168.0.4:7551
+              --l2=ws://blast-geth:7551
               --l2.jwt-secret=/root/jwt/jwt.hex
               --rollup.config=/root/rollup/blast/rollup.json
               --rpc.addr=0.0.0.0
