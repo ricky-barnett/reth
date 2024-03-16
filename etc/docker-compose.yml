@@ -3,10 +3,12 @@ name: "reth"
 
 networks:
     netBackEnd:
+        driver: bridge
         ipam:
             driver: default
             config:
-                - subnet: 192.168.0.0/24
+                - subnet: 192.168.1.0/24
+                  gateway: 192.168.1.1
 
 services:
     reth:
@@ -42,7 +44,7 @@ services:
             --rpc-max-response-size 9999999
         networks:
             netBackEnd:
-                ipv4_address: 192.168.0.3
+                ipv4_address: 192.168.1.3
 
     simulator:
         restart: unless-stopped
@@ -53,7 +55,7 @@ services:
             - 8001:8080
         networks:
             netBackEnd:
-                ipv4_address: 192.168.0.2
+                ipv4_address: 192.168.1.2
 
     prometheus:
         restart: unless-stopped
