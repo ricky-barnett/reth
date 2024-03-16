@@ -2,8 +2,8 @@ version: "3.9"
 name: "reth"
 
 networks:
-    driver: bridge
     netBackEnd:
+        driver: bridge
         ipam:
             driver: default
             config:
