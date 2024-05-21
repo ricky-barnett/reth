@@ -45,6 +45,8 @@ services:
             --rollup.sequencerhttp=https://sequencer.blast.io
             --discovery.port=30304
             --port=30304
+            --override.canyon=0
+            --override.ecotone=1716843599
         depends_on:
             geth-init:
                 condition: service_completed_successfully
