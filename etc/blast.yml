@@ -47,6 +47,7 @@ services:
             --port=30304
             --override.canyon=0
             --override.ecotone=1716843599
+        stop_grace_period: 5m
         depends_on:
             geth-init:
                 condition: service_completed_successfully
