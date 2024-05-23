@@ -12,9 +12,9 @@ services:
             - "8546:8546" # ws
             - "8551:8551" # engine
         volumes:
-            - ~/rethdata_mainnet:/root/.local/share/reth/mainnet/db
-            - ~/rethdata_sepolia:/root/.local/share/reth/sepolia/db
-            - ~/rethdata_goerli:/root/.local/share/reth/goerli/db
+            - ~/rethdata_mainnet:/root/.local/share/reth/mainnet
+            - ~/rethdata_sepolia:/root/.local/share/reth/sepolia
+            - ~/rethdata_goerli:/root/.local/share/reth/goerli
             - ~/rethlogs:/root/rethlogs
             - ./jwttoken:/root/jwt:ro
         # For Sepolia, replace `--chain mainnet` with `--chain sepolia`
