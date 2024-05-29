@@ -74,6 +74,7 @@ services:
         depends_on:
             - reth
             - blast-geth
+            - lighthouse
 
 volumes:
     blast:
