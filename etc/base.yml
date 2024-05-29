@@ -30,7 +30,7 @@ services:
             --authrpc.vhosts="*"
             --authrpc.jwtsecret=/root/jwt/jwt.hex
             --syncmode=snap
-            --gcmode=full
+            --gcmode=archive
             --maxpeers=100
             --rollup.disabletxpoolgossip=true
             --rollup.sequencerhttp=https://mainnet-sequencer.base.org
