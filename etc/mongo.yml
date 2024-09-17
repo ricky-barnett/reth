@@ -1,0 +1,13 @@
+version: "3.9"
+name: "reth"
+
+services:
+    mongo:
+        image: mongo
+        volumes:
+            - ~/mongo:/mongo
+        ports:
+            - '27017:27017'
+volumes:
+    mongo:
+        driver: local
