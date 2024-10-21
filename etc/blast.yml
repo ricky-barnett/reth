@@ -37,7 +37,7 @@ services:
             --authrpc.port="7551"
             --authrpc.vhosts="*"
             --authrpc.jwtsecret=/root/jwt/jwt.hex
-            --syncmode=full
+            --syncmode=snap
             --gcmode=full
             --nodiscover
             --maxpeers=0
