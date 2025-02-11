@@ -1,0 +1,68 @@
+version: "3.9"
+name: "reth"
+
+services:
+    unichain-geth:
+        image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-geth
+        volumes:
+            - ~/unichain:/unichain
+            - ./jwttoken:/root/jwt:ro
+        ports:
+            - "7545:7545"
+            - "7546:7546"
+            - "30304:30304/tcp"
+            - "30304:30304/udp"
+        command: >
+            --datadir=/unichain
+            --http
+            --http.corsdomain="*"
+            --http.vhosts="*"
+            --http.addr=0.0.0.0
+            --http.port=7545
+            --http.api=web3,debug,eth,txpool,net,engine
+            --ws
+            --ws.addr=0.0.0.0
+            --ws.port=7546
+            --ws.origins="*"
+            --ws.api=debug,eth,txpool,net,engine
+            --authrpc.addr="0.0.0.0"
+            --authrpc.port="7551"
+            --authrpc.vhosts="*"
+            --authrpc.jwtsecret=/root/jwt/jwt.hex
+            --syncmode=snap
+            --gcmode=full
+            --maxpeers=100
+            --rollup.disabletxpoolgossip=true
+            --rollup.sequencerhttp=https://mainnet-sequencer.unichain.org
+            --rollup.halt=major
+            --op-network=unichain-mainnet
+            --discovery.port=30304
+            --port=30304
+        stop_grace_period: 5m
+    unichain-op-node:
+        image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node
+        restart: unless-stopped
+        volumes:
+            - ./jwttoken:/root/jwt:ro
+        ports:
+            - "6000:6000" # rpc
+            - "6003:6003"
+        command: >
+            op-node
+              --l1=ws://reth:8546
+              --l1.trustrpc
+              --l2=ws://unichain-geth:6551
+              --l2.jwt-secret=/root/jwt/jwt.hex
+              --rpc.addr=0.0.0.0
+              --rpc.port=6000
+              --network=unichain-mainnet
+              --l1.beacon=http://lighthouse:5052
+              --syncmode=execution-layer
+        depends_on:
+            - reth
+            - unichain-geth
+            - lighthouse
+
+volumes:
+    base:
+        driver: local
