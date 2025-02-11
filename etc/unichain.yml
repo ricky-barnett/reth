@@ -45,8 +45,8 @@ services:
         volumes:
             - ./jwttoken:/root/jwt:ro
         ports:
-            - "6000:6000" # rpc
-            - "6003:6003"
+            - "7000:7000" # rpc
+            - "7003:7003"
         command: >
             op-node
               --l1=ws://reth:8546
@@ -54,7 +54,7 @@ services:
               --l2=ws://unichain-geth:6551
               --l2.jwt-secret=/root/jwt/jwt.hex
               --rpc.addr=0.0.0.0
-              --rpc.port=6000
+              --rpc.port=7000
               --network=unichain-mainnet
               --l1.beacon=http://lighthouse:5052
               --syncmode=execution-layer
