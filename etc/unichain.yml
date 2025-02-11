@@ -51,7 +51,7 @@ services:
             op-node
               --l1=ws://reth:8546
               --l1.trustrpc
-              --l2=ws://unichain-geth:6551
+              --l2=ws://unichain-geth:7551
               --l2.jwt-secret=/root/jwt/jwt.hex
               --rpc.addr=0.0.0.0
               --rpc.port=7000
