@@ -64,5 +64,5 @@ services:
             - lighthouse
 
 volumes:
-    base:
+    unichain:
         driver: local
