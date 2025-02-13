@@ -34,10 +34,10 @@ services:
             --maxpeers=100
             --rollup.disabletxpoolgossip=true
             --rollup.sequencerhttp=https://mainnet-sequencer.unichain.org
-            --rollup.halt=major
             --op-network=unichain-mainnet
             --discovery.port=30304
             --port=30304
+            --bootnodes=enode://b1a743328188dba3b2ed8c06abbb2688fabe64a3251e43bd77d4e5265bbd5cf03eca8ace4cde8ddb0c49c409b90bf941ebf556094638c6203edd6baa5ef0091b@3.134.214.169:30303,enode://ea9eaaf695facbe53090beb7a5b0411a81459bbf6e6caac151e587ee77120a1b07f3b9f3a9550f797d73d69840a643b775fd1e40344dea11e7660b6a483fe80e@52.14.30.39:30303,enode://77b6b1e72984d5d50e00ae934ffea982902226fe92fa50da42334c2750d8e405b55a5baabeb988c88125368142a64eda5096d0d4522d3b6eef75d166c7d303a9@3.148.100.173:30303
         stop_grace_period: 5m
     unichain-op-node:
         image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-node:v1.11.0-rc.2
