@@ -34,6 +34,7 @@ services:
             --maxpeers=100
             --rollup.disabletxpoolgossip=true
             --rollup.sequencerhttp=https://mainnet-sequencer.base.org
+            --rollup.halt=major
             --op-network=base-mainnet
             --discovery.port=30305
             --port=30305
@@ -60,6 +61,7 @@ services:
               --rollup.config=/root/rollup/base/rollup.json
               --l1.beacon=http://lighthouse:5052
               --syncmode=execution-layer
+        stop_grace_period: 5m
         depends_on:
             - reth
             - base-geth
