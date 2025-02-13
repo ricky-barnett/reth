@@ -58,7 +58,6 @@ services:
               --rpc.addr=0.0.0.0
               --rpc.port=6000
               --network=base-mainnet
-              --rollup.config=/root/rollup/base/rollup.json
               --l1.beacon=http://lighthouse:5052
               --syncmode=execution-layer
         stop_grace_period: 5m
